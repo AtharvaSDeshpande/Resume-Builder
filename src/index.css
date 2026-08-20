@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   DESIGN TOKENS (app chrome only — the résumé keeps its own Arial styling)
+   ==========================================================================*/
+:root {
+  --brand: #2e74b5;
+  --brand-dark: #1f4e79;
+  --rail: #0f172a; /* slate-900 */
+  --rail-2: #020617; /* slate-950 */
+  --surface: #f1f5f9; /* slate-100 */
+}
+
+/* ============================================================================
+   BASE LAYER
+   ==========================================================================*/
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    /* Inter powers the app UI; the résumé sheet forces Arial via `font-body`. */
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    color: #0f172a;
+    background: var(--surface);
+  }
+
+  /* The résumé must render its accent bars/dividers even on paper. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Slim, modern scrollbars for the app chrome. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.55);
+    background-clip: content-box;
+  }
+}
+
+/* ============================================================================
+   COMPONENT LAYER — the physical A4 sheet (unchanged geometry)
+   ==========================================================================*/
+@layer components {
+  .a4-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff;
+    box-sizing: border-box;
+    padding: 10mm 9.7mm 7mm 7.5mm; /* reverse-engineered from source PDF margins */
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* Preview-only validation indicator. Stripped entirely in print (below). */
+  .flag-box {
+    outline: 1.5px dashed theme('colors.flag');
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  .flag-text {
+    color: theme('colors.flag');
+  }
+
+  /* Double-click-to-edit affordance on résumé sections (screen only). */
+  .resume-editable {
+    cursor: pointer;
+    border-radius: 4px;
+    transition: box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .resume-editable:hover {
+      background-color: rgba(46, 116, 181, 0.06);
+      box-shadow: 0 0 0 2px rgba(46, 116, 181, 0.35);
+    }
+  }
+
+  /* AI diff highlights (preview only). Use background/inset-shadow so text does
+     NOT shift — the pixel-perfect layout is preserved. */
+  .diff-added {
+    background-color: rgba(16, 185, 129, 0.14);
+    box-shadow: inset 2px 0 0 rgba(16, 185, 129, 0.6);
+    border-radius: 2px;
+  }
+  .diff-changed {
+    background-color: rgba(16, 185, 129, 0.09);
+    border-radius: 2px;
+  }
+  .wd-add {
+    background-color: rgba(16, 185, 129, 0.22);
+    border-radius: 2px;
+  }
+  .wd-del {
+    color: #dc2626;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    opacity: 0.65;
+  }
+}
+
+/* ============================================================================
+   APP SHELL utilities
+   ==========================================================================*/
+.workspace {
+  background: radial-gradient(140% 120% at 50% -10%, #f8fafc 0%, var(--surface) 55%, #e6eaf0 100%);
+  min-height: 100vh;
+}
+.canvas-scroll {
+  padding: 28px;
+  overflow: auto;
+}
+@media (max-width: 767px) {
+  .canvas-scroll {
+    padding: 14px;
+  }
+}
+
+/* Fit-to-width stage that scales the A4 sheet down on small screens. */
+.resume-stage {
+  width: 100%;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate 1.15s ease-in-out infinite;
+}
+.anim-fade {
+  animation: fade-in 0.18s ease both;
+}
+.anim-pop {
+  animation: pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.anim-slide-right {
+  animation: slide-in-right 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.anim-slide-left {
+  animation: slide-in-left 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade,
+  .anim-pop,
+  .anim-slide-right,
+  .anim-slide-left {
+    animation: none;
+  }
+}
+
+/* ============================================================================
+   A4 PRINT ENGINE — bulletproof single-page override
+   ==========================================================================*/
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide every piece of app UI. */
+  .no-print,
+  .app-sidebar,
+  .app-toolbar,
+  .app-drawer,
+  .app-overlay,
+  .validation-panel {
+    display: none !important;
+  }
+
+  .flag-box {
+    outline: none !important;
+  }
+  .flag-text {
+    color: inherit !important;
+  }
+
+  /* Diff highlights never print — the paper output is the clean tailored résumé. */
+  .diff-added,
+  .diff-changed,
+  .wd-add {
+    background: none !important;
+    box-shadow: none !important;
+  }
+  .wd-del {
+    display: none !important;
+  }
+  .resume-editable:hover {
+    background: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Neutralise the fit-to-width scaling so the sheet prints at true size. */
+  .resume-stage,
+  .resume-stage > div,
+  .resume-stage > div > div {
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  .workspace,
+  .canvas-scroll {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .a4-sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 10mm 9.7mm 7mm 7.5mm !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+
+  .a4-sheet * {
+    page-break-inside: avoid;
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "profileId": "atharvaFinance",
+  "profileName": "Atharva Deshpande",
+  "profileRole": "Finance / Analytics",
+
+  "header": {
+    "name": "ATHARVA S DESHPANDE",
+    "meta": [
+      "Age | Gender: 25 | Male",
+      "Experience: 38 months",
+      "Portfolio Link: https://atharva.adcodes.co.in"
+    ],
+    "logo": { "line1": "GREAT", "line2": "LAKES", "line3": "CHENNAI" }
+  },
+
+  "profileSummary": {
+    "summary": "Analytical Software Engineer with 3 years of enterprise experience. Leveraging quantitative, data modeling, and optimization skills to drive corporate finance and data-driven strategy."
+  },
+
+  "professionalExperience": [
+    {
+      "heading": "Software Engineer | Bentley Systems | 2022-2025",
+      "bullets": [
+        "**Coordinated** delivery with 4 teams, syncing diverse workflows to optimize efficiency.",
+        "**Mitigated risks** by maintaining 85% test coverage, eliminating production errors.",
+        "**Standardized deployment** across 4 projects, maximizing enterprise asset reuse.",
+        "**Optimized cost-efficiency** by refactoring 10+ modules to reduce compute overhead.",
+        "**Built modular UI components** used across projects, minimizing redundant asset costs."
+      ]
+    }
+  ],
+
+  "academicProjects": [
+    {
+      "title": "TASK PLANNER – Deadlines, in flow.",
+      "bullets": [
+        "Conceptualized an integrated workflow tracker to audit deadlines and project schedules.",
+        "Managed **end-to-end lifecycle**, building a multi-tenant solution scaled across sections.",
+        "Architected automated rollout framework to cut administrative friction and tracking costs."
+      ]
+    },
+    {
+      "title": "PODFAST: Extractive Audio Summarization for Podcasts.",
+      "bullets": [
+        "Built an automated quantitative model pipeline to extract dense data from audio episodes.",
+        "**Led project execution**, analyzing performance bottlenecks and managing code optimization.",
+        "Co-authored a novel algorithmic approach published by Springer, validating data models."
+      ]
+    }
+  ],
+
+  "qualifications": [
+    { "degree": "PGPM", "institute": "Great Lakes Institute of Management, Chennai", "score": "Pursuing", "year": "2027" },
+    { "degree": "B. E. (Comp Eng)", "institute": "PVG's College of Engineering and Technology, Pune", "score": "9.6/10", "year": "2022" },
+    { "degree": "12th", "institute": "Mahaveer Junior College, Pune", "score": "89.54%", "year": "2018" },
+    { "degree": "10th", "institute": "Delhi Public School, Pune", "score": "9/10", "year": "2016" }
+  ],
+
+  "keySkills": [
+    "Financial Modeling & Analytics",
+    "Quantitative Data Analysis",
+    "Risk & Capital Allocation",
+    "Process & Cost Optimization",
+    "Agile Project Management",
+    "Strategic Problem Solving",
+    "Performance & Scalability"
+  ],
+
+  "certificates": [
+    "NPTEL | C++ | 2019"
+  ],
+
+  "awards": [
+    "ESOPs Award - Bentley Systems | 2023",
+    "Published Research Paper - Springer | 2022",
+    "National Level Hackathon - Winner | 2020"
+  ],
+
+  "positionsOfResponsibility": [
+    "**Web Team Lead** | ACES PVGCOET | 2021"
+  ],
+
+  "extraCurriculars": [
+    "Volunteer: Rebuilt digital layouts for Dee Foundation to optimize asset usability.",
+    "Participated in Ideathon business model hackathon at GLIM Chennai.",
+    "Active Member, Product Management Club, GLIM Chennai.",
+    "Committee Work: Engineered simulation environments for testing at VLABS IITB."
+  ],
+
+  "languages": [
+    "English",
+    "Hindi",
+    "Marathi"
+  ],
+
+  "footer": {
+    "left": "FT273036",
+    "right": "Batch of 2026-27"
+  }
+}

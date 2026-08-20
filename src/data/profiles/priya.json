@@ -1,0 +1,98 @@
+{
+  "profileId": "priya",
+  "profileName": "Priya Nair",
+  "profileRole": "Data / Analytics",
+
+  "header": {
+    "name": "PRIYA R NAIR",
+    "meta": [
+      "Age | Gender: 24 | Female",
+      "Experience: 26 months",
+      "Portfolio Link: https://priya.datafolio.io"
+    ],
+    "logo": { "line1": "GREAT", "line2": "LAKES", "line3": "CHENNAI" }
+  },
+
+  "profileSummary": {
+    "summary": "Data-driven analyst skilled in **decision intelligence** and stakeholder storytelling, translating raw metrics into revenue-shaping product bets across fast-moving teams."
+  },
+
+  "professionalExperience": [
+    {
+      "heading": "Analyst – II | Fractal Analytics | Jul 2023 – Present",
+      "bullets": [
+        "**Shipped** 12 executive dashboards adopted by 3 business units for weekly planning",
+        "**Automated** an ETL pipeline that cut manual reporting effort by **70%**",
+        "**Partnered** with product to run **18 A/B tests**, lifting activation by 9%",
+        "**Mentored** 2 junior analysts on SQL and experimentation hygiene"
+      ]
+    }
+  ],
+
+  "academicProjects": [
+    {
+      "title": "CHURN RADAR – Predict before they leave.",
+      "bullets": [
+        "Built a gradient-boosted churn model reaching **0.88 AUC** on holdout data",
+        "Owned the **feature store design**, serving 40+ features to downstream teams",
+        "Packaged the model behind a REST API for real-time scoring"
+      ]
+    },
+    {
+      "title": "PRICEPULSE: Dynamic Retail Price Elasticity.",
+      "bullets": [
+        "Modelled elasticity across 5 categories to recommend markdown windows",
+        "**Led** the data cleaning of a 2M-row transaction ledger",
+        "Presented findings that informed a live pricing pilot"
+      ]
+    }
+  ],
+
+  "qualifications": [
+    { "degree": "PGPM", "institute": "Great Lakes Institute of Management, Chennai", "score": "Pursuing", "year": "2027" },
+    { "degree": "B. Tech (IT)", "institute": "COEP Technological University, Pune", "score": "9.2/10", "year": "2023" },
+    { "degree": "12th", "institute": "Fergusson College, Pune", "score": "91.20%", "year": "2019" },
+    { "degree": "10th", "institute": "St. Mary's School, Pune", "score": "9.6/10", "year": "2017" }
+  ],
+
+  "keySkills": [
+    "SQL and Python",
+    "Data Visualization",
+    "A/B Experimentation",
+    "Machine Learning",
+    "Stakeholder Communication",
+    "Statistical Modeling"
+  ],
+
+  "certificates": [
+    "Google | Data Analytics | 2022 | 6 months",
+    "AWS | Cloud Practitioner | 2023"
+  ],
+
+  "awards": [
+    "Top Performer Award - Fractal | 2024",
+    "Best Capstone – COEP | 2023",
+    "Kaggle Bronze Medal | 2022"
+  ],
+
+  "positionsOfResponsibility": [
+    "**Analytics Lead** | Data Club COEP | 2021 | 2 years"
+  ],
+
+  "extraCurriculars": [
+    "Volunteer Work: Ran free data-literacy workshops for **NGO Pratham**",
+    "Finalist at Inter-college datathon by **GLIM Chennai**",
+    "Member of the Consulting Club, **GLIM Chennai**"
+  ],
+
+  "languages": [
+    "English",
+    "Hindi",
+    "Malayalam"
+  ],
+
+  "footer": {
+    "left": "FT273040",
+    "right": "Batch of 2026-27"
+  }
+}

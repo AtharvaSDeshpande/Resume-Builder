@@ -1,0 +1,226 @@
+{
+  "meta": {
+    "schemaVersion": "1.1.0",
+    "page": "A4-portrait",
+    "description": "Reverse-engineered layout tolerances that keep this design bounded to a single A4 page, PLUS the GLIM-C resume-writing guidelines (content quality rules). Character caps are visual-line-budget derived from the PDF's column widths; the writingGuidelines drive content advice + AI tailoring."
+  },
+
+  "writingGuidelines": {
+    "source": "GLIM-C Resume Writing Guidelines",
+    "global": [
+      "One page. Use 90–100% of the available space — neither sparse nor overflowing.",
+      "Be correct, relevant, and impactful. Proofread; keep punctuation and formatting consistent.",
+      "Use bold/highlight judiciously to guide the recruiter's eye — do not over-bold.",
+      "Tailor every section to the target job description; write only claims you can justify.",
+      "Think from the recruiter's point of view: show relevant knowledge, skills, and quantified achievements."
+    ],
+    "bullet": {
+      "framework": "Action verb + Task/Project + Metric/Result",
+      "startWithActionVerb": true,
+      "quantify": true,
+      "maxLines": 1.5,
+      "avoid": ["Responsible for", "Worked on", "Duties included", "Helped with", "Involved in"]
+    },
+    "actionVerbs": {
+      "management": ["Accomplished", "Adapted", "Coordinated", "Delegated", "Directed", "Eliminated", "Enforced", "Fostered", "Innovated", "Led", "Managed", "Spearheaded"],
+      "financial": ["Analyzed", "Appraised", "Audited", "Budgeted", "Computed", "Forecasted", "Projected", "Reduced"],
+      "problemSolving": ["Implemented", "Improved", "Optimized", "Overhauled", "Prioritized", "Recommended", "Resolved", "Streamlined"],
+      "communication": ["Authored", "Corresponded", "Delivered", "Enlisted", "Influenced", "Interpreted", "Mediated", "Negotiated", "Presented"]
+    },
+    "weakOpeners": ["responsible", "worked", "helped", "involved", "assisted", "duties", "was", "participated", "handled", "part"]
+  },
+
+  "design": {
+    "page": {
+      "widthMm": 210,
+      "heightMm": 297,
+      "paddingMm": { "top": 10, "right": 9.7, "bottom": 7, "left": 7.5 }
+    },
+    "colors": {
+      "accent": { "hex": "#2E74B5", "tw": "text-accent" },
+      "accentDark": { "hex": "#1F4E79", "tw": "text-accent-dark" },
+      "accentLight": { "hex": "#8DB4E2", "tw": "from-accent-light" },
+      "ink": { "hex": "#111111", "tw": "text-ink" },
+      "inkSoft": { "hex": "#333333", "tw": "text-ink-soft" },
+      "divider": { "gradientTw": "bg-gradient-to-r from-accent-light via-accent to-accent-dark" }
+    },
+    "fontPairing": {
+      "heading": { "family": "Arial, Helvetica, sans-serif", "tw": "font-heading" },
+      "body": { "family": "Arial, Helvetica, sans-serif", "tw": "font-body" }
+    },
+    "typeScale": {
+      "name": { "px": 26.5, "weight": 700, "note": "20pt @96dpi" },
+      "sectionHeader": { "px": 20, "weight": 700, "lineHeightPx": 22, "note": "15pt bold uppercase" },
+      "subHeader": { "px": 14, "weight": 700, "note": "job title / project title, 10.5pt bold italic" },
+      "body": { "px": 13.3, "weight": 400, "lineHeightPx": 16, "note": "10pt / 12pt leading" },
+      "meta": { "px": 13.3, "weight": 400, "note": "10pt italic" },
+      "table": { "px": 12, "weight": 400, "note": "9pt" },
+      "footer": { "px": 12, "weight": 400, "note": "9pt" }
+    },
+    "spacingScale": {
+      "sectionGapPx": 13,
+      "headerToBodyPx": 4,
+      "bulletGapPx": 5,
+      "bulletLineHeightPx": 16,
+      "bulletMarkerIndentPx": 18,
+      "columnGapMm": 7
+    }
+  },
+
+  "layout": {
+    "order": ["header", "profileSummary", "body", "footer"],
+    "columns": {
+      "left": ["professionalExperience", "academicProjects", "qualifications"],
+      "right": ["keySkills", "certificates", "awards", "positionsOfResponsibility", "extraCurriculars", "languages"]
+    },
+    "columnWidthMm": { "left": 114, "right": 71.5 }
+  },
+
+  "sections": {
+    "header": {
+      "label": null,
+      "type": "header",
+      "fields": {
+        "name": { "label": "Full Name", "maxChars": 34, "minChars": 3 },
+        "meta": { "label": "Meta Lines", "maxLines": 3, "maxCharsPerLine": 48 }
+      }
+    },
+
+    "profileSummary": {
+      "label": "PROFILE SUMMARY",
+      "type": "headline",
+      "fullWidth": true,
+      "summary": { "maxChars": 185, "minChars": 80, "maxLines": 2 },
+      "guidelines": [
+        "1–2 crisp lines tailored to the target JD; establish relevance at first glance.",
+        "Capture your most relevant skills and experience — and only skills you can justify.",
+        "Do NOT brand yourself with your previous designation or industry.",
+        "Keep keywords connected and broad; don't narrow the scope to one industry.",
+        "Bold exactly one key skill you genuinely have and that matters for the role."
+      ]
+    },
+
+    "professionalExperience": {
+      "label": "PROFESSIONAL EXPERIENCE",
+      "type": "experience",
+      "entries": { "min": 1, "max": 2 },
+      "entry": {
+        "heading": { "maxChars": 64, "minChars": 10 },
+        "bullets": { "min": 3, "max": 6, "maxCharsPerBullet": 135, "maxLines": 1.5 }
+      },
+      "requireQuantification": true,
+      "guidelines": [
+        "Heading fits one line: Title | Company | Dates.",
+        "Start EVERY bullet with a strong action verb — never 'Responsible for' / 'Worked on'.",
+        "Use Action verb + Task/Project + Metric/Result; quantify impact with numbers or %.",
+        "Order bullets: outcomes → quantified impact → other responsibilities.",
+        "No bullet longer than ~1.5 lines so the reader finishes it.",
+        "Put any accolade/recognition as the LAST bullet of the role, with keyword highlighting.",
+        "Avoid arcane technical jargon, abbreviations, and company-specific terms."
+      ]
+    },
+
+    "academicProjects": {
+      "label": "ACADEMIC PROJECTS",
+      "type": "projects",
+      "entries": { "min": 1, "max": 2 },
+      "entry": {
+        "title": { "maxChars": 58, "minChars": 6 },
+        "bullets": { "min": 2, "max": 4, "maxCharsPerBullet": 135, "maxLines": 1.5 }
+      },
+      "guidelines": [
+        "Each project should convey a problem statement, methodology, and impact.",
+        "Use projects to showcase relevant knowledge — great for an industry/function transition."
+      ]
+    },
+
+    "qualifications": {
+      "label": "QUALIFICATIONS",
+      "type": "table",
+      "columns": ["Degree", "Institute/ University, City", "%/CGPA", "Year"],
+      "rows": { "min": 2, "max": 4 },
+      "cell": {
+        "degree": { "maxChars": 30 },
+        "institute": { "maxChars": 52 },
+        "score": { "maxChars": 10, "maxDecimals": 2 },
+        "year": { "maxChars": 8 }
+      },
+      "guidelines": [
+        "Rows in order: PGPM, UG, 12th, 10th — with correct timelines and spellings.",
+        "Round marks to at most 2 decimals (no 3rd decimal place).",
+        "No Class 9 or below; no extra projects/internships in this table."
+      ]
+    },
+
+    "keySkills": {
+      "label": "KEY SKILLS",
+      "type": "bullets",
+      "variant": "accent",
+      "items": { "min": 4, "max": 8, "maxCharsPerItem": 34 },
+      "guidelines": [
+        "List the key competencies that add value and match the JD.",
+        "Only skills you can justify in an interview."
+      ]
+    },
+
+    "certificates": {
+      "label": "CERTIFICATES",
+      "type": "bullets",
+      "variant": "plain",
+      "items": { "min": 1, "max": 4, "maxCharsPerItem": 40 },
+      "format": "Course | Platform | Year | (duration in weeks)",
+      "guidelines": [
+        "Only certifications that add value to your profile.",
+        "Include platform, year, and duration in weeks — e.g. 'SQL for Data Mgmt | Udemy | 2025 | 12 weeks'."
+      ]
+    },
+
+    "awards": {
+      "label": "AWARDS & ACHIEVEMENTS",
+      "type": "bullets",
+      "variant": "plain",
+      "items": { "min": 1, "max": 4, "maxCharsPerItem": 70 },
+      "format": "Award, Organization, Month Year",
+      "guidelines": [
+        "Only value-adding recognitions; list most recent first.",
+        "Include the organization and date — e.g. 'Spot Award, TCS, Jan 2025'."
+      ]
+    },
+
+    "positionsOfResponsibility": {
+      "label": "POSITIONS OF RESPONSIBILITY",
+      "type": "bullets",
+      "variant": "plain-bold-lead",
+      "items": { "min": 1, "max": 3, "maxCharsPerItem": 60 },
+      "guidelines": ["Leadership roles with scope and tenure; bold the role title."]
+    },
+
+    "extraCurriculars": {
+      "label": "EXTRA-CURRICULARS",
+      "type": "bullets",
+      "variant": "plain",
+      "items": { "min": 1, "max": 5, "maxCharsPerItem": 110 },
+      "guidelines": [
+        "Present a well-rounded person with substance and depth in each interest.",
+        "Mention any recognitions in your areas of interest."
+      ]
+    },
+
+    "languages": {
+      "label": "LANGUAGES",
+      "type": "bullets",
+      "variant": "plain",
+      "items": { "min": 1, "max": 5, "maxCharsPerItem": 18 },
+      "guidelines": ["List ONLY languages you can read, write, and speak proficiently."]
+    },
+
+    "footer": {
+      "label": null,
+      "type": "footer",
+      "fields": {
+        "left": { "label": "Reference ID", "maxChars": 12 },
+        "right": { "label": "Batch", "maxChars": 20 }
+      }
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "profileId": "atharva",
+  "profileName": "Atharva Deshpande",
+  "profileRole": "Product / Frontend",
+
+  "header": {
+    "name": "ATHARVA S DESHPANDE",
+    "meta": [
+      "Age | Gender: 25 | Male",
+      "Experience: 38 months",
+      "Portfolio Link: https://atharva.adcodes.co.in"
+    ],
+    "logo": { "line1": "GREAT", "line2": "LAKES", "line3": "CHENNAI" }
+  },
+
+  "profileSummary": {
+    "summary": "Skilled in **product growth optimization** and cross-functional team collaboration, leveraging a front-end background to accelerate feature delivery and enhance digital user engagement."
+  },
+
+  "professionalExperience": [
+    {
+      "heading": "Software Engineer – 1 | Bentley Systems | Aug 2022 – Oct 2025",
+      "bullets": [
+        "**Delivered** complex features while coordinating with 4 teams that had different workflows, adapted quickly to each team's way of working",
+        "**Maintained** 85% test coverage across features, keeping production stable with **no user-reported bugs**",
+        "**Standardized** development across **4 frontend projects** establishing a uniform user experience across platforms",
+        "**Optimized** application maintainability by restructuring **10+ modules**, reducing code complexity to streamline future **feature scaling**",
+        "**Built** reusable **UI components** adopted across multiple projects, reducing duplicate work and keeping the interface consistent."
+      ]
+    }
+  ],
+
+  "academicProjects": [
+    {
+      "title": "TASK PLANNER – Deadlines, in flow.",
+      "bullets": [
+        "Conceptualized and built Task Planner a one stop place to manage deadlines, assignments, group work and announcements",
+        "Owned the **end-to-end product lifecycle**, delivering a multi-tenant solution scalable across programs and sections",
+        "Designed for institute-wide rollout to cut missed deadlines and manual administrative effort"
+      ]
+    },
+    {
+      "title": "PODFAST: Extractive Audio Summarization for Podcasts.",
+      "bullets": [
+        "Tackled how listeners struggle to extract key insights from long podcast episodes by building a full-stack platform with 3 AI modules",
+        "**Led** the team in the development of project",
+        "The novel summarization approach earned a peer-reviewed Springer publication"
+      ]
+    }
+  ],
+
+  "qualifications": [
+    { "degree": "PGPM", "institute": "Great Lakes Institute of Management, Chennai", "score": "Pursuing", "year": "2027" },
+    { "degree": "B. E. (Computer Engineering)", "institute": "PVG's College of Engineering and Technology, Pune", "score": "9.6/10", "year": "2022" },
+    { "degree": "12th", "institute": "Mahaveer Junior College, Pune", "score": "89.54%", "year": "2018" },
+    { "degree": "10th", "institute": "Delhi Public School, Pune", "score": "9/10", "year": "2016" }
+  ],
+
+  "keySkills": [
+    "Agile and Scrum",
+    "Communication Skills",
+    "Performance Optimization",
+    "Code Reviews",
+    "Debugging",
+    "Frontend Development",
+    "Testing and Quality Assurance"
+  ],
+
+  "certificates": [
+    "NPTEL | C++ | 2019 | 8 weeks"
+  ],
+
+  "awards": [
+    "Employee Stock Ownership Plans Award - Bentley Systems | 2023",
+    "Published Research Paper – Springer | 2022",
+    "National Level Hackathon – Winner | 2020"
+  ],
+
+  "positionsOfResponsibility": [
+    "**Web Team Lead** | ACES PVGCOET | 2020 | 2 years"
+  ],
+
+  "extraCurriculars": [
+    "Volunteer Work: Updated and rebuilt the website layouts for the **Dee Foundation** to make it easier to use",
+    "Participated in Ideathon hackathon organized by **GLIM Chennai**",
+    "Part of Product Management Club, **GLIM Chennai**",
+    "Committee Work: Developed one of the virtual labs for **VLABS IITB**"
+  ],
+
+  "languages": [
+    "English",
+    "Hindi",
+    "Marathi"
+  ],
+
+  "footer": {
+    "left": "FT273036",
+    "right": "Batch of 2026-27"
+  }
+}

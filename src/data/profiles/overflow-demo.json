@@ -1,0 +1,86 @@
+{
+  "profileId": "overflow-demo",
+  "profileName": "Overflow Demo",
+  "profileRole": "⚠ Breaches constraints",
+
+  "header": {
+    "name": "MAXIMILIAN ALEXANDER CONSTANTINE THE THIRD",
+    "meta": [
+      "Age | Gender: 29 | Male",
+      "Experience: 84 months on a very long single meta line that clearly overflows",
+      "Portfolio Link: https://demo.example.com"
+    ],
+    "logo": { "line1": "GREAT", "line2": "LAKES", "line3": "CHENNAI" }
+  },
+
+  "profileSummary": {
+    "summary": "This summary is deliberately far too long to fit inside the two-line budget the template allows, and it keeps going and going and going well past the reverse-engineered character cap so that the validation engine flags it with a dashed red border in preview mode only, never in print."
+  },
+
+  "professionalExperience": [
+    {
+      "heading": "Senior Staff Principal Distinguished Engineer | MegaCorp Global | 2019 – Now",
+      "bullets": [
+        "**Delivered** an extraordinarily long bullet point that runs well beyond the maximum characters-per-bullet budget so the line will visibly overflow the column and trip the validator",
+        "Short bullet one",
+        "Short bullet two",
+        "Short bullet three",
+        "Short bullet four",
+        "Short bullet five — this is the seventh bullet, exceeding the max of six",
+        "Short bullet six — pushing the entry past its bullet ceiling"
+      ]
+    }
+  ],
+
+  "academicProjects": [
+    {
+      "title": "SINGLE PROJECT WITH TOO FEW BULLETS",
+      "bullets": [
+        "Only one bullet here, which is below the minimum of two bullets"
+      ]
+    }
+  ],
+
+  "qualifications": [
+    { "degree": "PGPM", "institute": "Great Lakes Institute of Management, Chennai", "score": "Pursuing", "year": "2027" },
+    { "degree": "B. E.", "institute": "Some Institute", "score": "8/10", "year": "2021" }
+  ],
+
+  "keySkills": [
+    "Skill One",
+    "Skill Two",
+    "Skill Three That Is Way Too Long To Fit",
+    "Skill Four",
+    "Skill Five",
+    "Skill Six",
+    "Skill Seven",
+    "Skill Eight",
+    "Skill Nine Exceeds The Max Item Cap"
+  ],
+
+  "certificates": [
+    "Certificate name that runs past the character cap for certificates"
+  ],
+
+  "awards": [
+    "A single award"
+  ],
+
+  "positionsOfResponsibility": [
+    "**President** | Everything Society | 2018 | 3 years"
+  ],
+
+  "extraCurriculars": [
+    "Volunteer work that is described in far too much detail to fit within the extra-curricular per-item character budget"
+  ],
+
+  "languages": [
+    "English",
+    "Hindi"
+  ],
+
+  "footer": {
+    "left": "FT999999",
+    "right": "Batch of 2026-27"
+  }
+}

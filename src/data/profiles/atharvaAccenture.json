@@ -1,0 +1,100 @@
+{
+  "profileId": "atharvaAccenture",
+  "profileName": "Atharva Deshpande",
+  "profileRole": "Product Management",
+
+  "header": {
+    "name": "ATHARVA S DESHPANDE",
+    "meta": [
+      "Age | Gender: 25 | Male",
+      "Experience: 38 months",
+      "Portfolio Link: https://atharva.adcodes.co.in"
+    ],
+    "logo": { "line1": "GREAT", "line2": "LAKES", "line3": "CHENNAI" }
+  },
+
+  "profileSummary": {
+    "summary": "Engineer with 38 months of enterprise experience and a PGPM. Skilled in agile product lifecycle execution, cross-functional stakeholder alignment, and launching scalable, AI-driven digital platforms."
+  },
+
+  "professionalExperience": [
+    {
+      "heading": "Software Engineer | Bentley Systems | Aug 2022 – Oct 2025",
+      "bullets": [
+        "**Led cross-functional delivery** across 4 matrix teams, aligning diverse technical workflows.",
+        "**Managed feature backlog** and risk mitigation, achieving 85% test coverage with zero prod bugs.",
+        "**Standardized frontend architecture** across 4 core products to scale long-term feature roadmaps.",
+        "**Refactored 10+ complex modules** via design thinking to reduce debt and optimize compute.",
+        "**Built reusable UI frameworks** that cut redundant development and streamlined resource gaps."
+      ]
+    }
+  ],
+
+  "academicProjects": [
+    {
+      "title": "TASK PLANNER – Enterprise Workflow Platform",
+      "bullets": [
+        "Conceptualized a multi-tenant planner to track deadlines, group allocations, and schedules.",
+        "Owned **end-to-end product lifecycle**, aligning multi-functional requirements into a roadmap.",
+        "Designed an institute-wide rollout strategy to maximize user adoption and minimize tracking costs."
+      ]
+    },
+    {
+      "title": "PODFAST – Extractive AI Summarization Platform",
+      "bullets": [
+        "Built a full-stack platform using 3 AI modules to optimize insight extraction from long audio.",
+        "**Led development sprints**, translating unstructured data needs into core functional capabilities.",
+        "Published a novel statistical approach in Springer, validating advanced data capabilities."
+      ]
+    }
+  ],
+
+  "qualifications": [
+    { "degree": "PGPM", "institute": "Great Lakes Institute of Management, Chennai", "score": "Pursuing", "year": "2027" },
+    { "degree": "B. E. (Comp Eng)", "institute": "PVG's College of Engineering and Technology, Pune", "score": "9.6/10", "year": "2022" },
+    { "degree": "12th", "institute": "Mahaveer Junior College, Pune", "score": "89.54%", "year": "2018" },
+    { "degree": "10th", "institute": "Delhi Public School, Pune", "score": "9/10", "year": "2016" }
+  ],
+
+  "keySkills": [
+    "Product Strategy & Roadmapping",
+    "Agile & Scrum Methodologies",
+    "Cross-Functional Leadership",
+    "Requirement Elicitation",
+    "AI & Data-Driven Optimization",
+    "Product Backlog Management",
+    "UI/UX & Design Thinking"
+  ],
+
+  "certificates": [
+    "NPTEL | C++ Programming | 2019"
+  ],
+
+  "awards": [
+    "ESOPs Performance Award - Bentley Systems | 2023",
+    "Published Research Paper – Springer | 2022",
+    "National Level Hackathon – Winner | 2020"
+  ],
+
+  "positionsOfResponsibility": [
+    "**Web Team Lead** | ACES PVGCOET | 2021 | 2 years"
+  ],
+
+  "extraCurriculars": [
+    "Volunteer: Managed end-to-end web layout modernization for the **Dee Foundation**.",
+    "Participated in Ideathon business innovation hackathon at **GLIM Chennai**.",
+    "Core Member, Product Management Club, **GLIM Chennai**.",
+    "Committee Work: Engineered quantitative simulation models for **VLABS IITB**."
+  ],
+
+  "languages": [
+    "English",
+    "Hindi",
+    "Marathi"
+  ],
+
+  "footer": {
+    "left": "FT273036",
+    "right": "Batch of 2026-27"
+  }
+}
