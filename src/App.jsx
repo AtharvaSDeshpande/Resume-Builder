@@ -1,9 +1,11 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext.jsx'
+import { ApiKeyProvider, useApiKey } from './byok/ApiKeyContext.jsx'
 import { DataProvider } from './data/AppData.jsx'
 import SignInScreen from './components/SignInScreen.jsx'
 import AppShell from './components/AppShell.jsx'
+import ApiKeySetup from './pages/ApiKeySetup.jsx'
 import PositionsPage from './pages/PositionsPage.jsx'
 import PositionDetailPage from './pages/PositionDetailPage.jsx'
 import ResumesPage from './pages/ResumesPage.jsx'
@@ -14,6 +16,19 @@ export default function App() {
   if (!ready) return <Splash />
   if (!isAuthenticated) return <SignInScreen />
 
+  // Once signed in, BYOK is the mandatory first step until a key is linked.
+  return (
+    <ApiKeyProvider>
+      <KeyGated />
+    </ApiKeyProvider>
+  )
+}
+
+function KeyGated() {
+  const { loading, needsSetup } = useApiKey()
+  if (loading) return <Splash />
+  if (needsSetup) return <ApiKeySetup onboarding />
+
   return (
     <DataProvider>
       <AppShell>
@@ -23,6 +38,7 @@ export default function App() {
           <Route path="/positions/:id/*" element={<PositionDetailPage />} />
           <Route path="/resumes" element={<ResumesPage />} />
           <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/settings" element={<ApiKeySetup />} />
           <Route path="*" element={<Navigate to="/positions" replace />} />
         </Routes>
       </AppShell>

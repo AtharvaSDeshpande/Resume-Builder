@@ -1,13 +1,47 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { jsonrepair } from 'jsonrepair'
 import { config } from '../config.js'
+import { getActiveUserKey } from './keyContext.js'
 
 /**
  * Thin Gemini client for the agent. Each call names the model to use (task
  * routing happens in the agent), with a shared fallback chain on rate-limit /
  * overload, thinking-token control, and tolerant JSON parsing.
+ *
+ * BYOK: the client is built per call from the request-scoped user key (their own
+ * Gemini key, so quota/billing is theirs), falling back to the server key only
+ * when BYOK isn't configured.
  */
-const client = new GoogleGenerativeAI(config.llm.apiKey || 'missing')
+const activeKey = () => getActiveUserKey() || config.llm.apiKey || 'missing'
+const getClient = () => new GoogleGenerativeAI(activeKey())
+
+/** Does the current request have a usable key (user's own, or the server's)? */
+export const hasUsableKey = () => Boolean(getActiveUserKey() || config.llm.apiKey)
+
+/** A rejected/invalid API key (as opposed to a rate-limit or overload). */
+const isKeyError = (err) => {
+  const blob = `${err?.status || ''} ${err?.message || ''}`.toLowerCase()
+  return /api key not valid|api_key_invalid|invalid api key|permission denied|api key expired|\b401\b|\b403\b/.test(blob)
+}
+
+const keyErr = () =>
+  Object.assign(new Error('Your Gemini API key was rejected. Update it in Settings.'), { status: 400, code: 'BYOK_INVALID' })
+
+/**
+ * Validate a candidate API key with a minimal live call, before we store it.
+ * Returns true if the key works (a rate-limit still counts as "valid").
+ */
+export async function validateApiKey(apiKey) {
+  try {
+    const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: config.llm.models.parse })
+    await model.generateContent({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 1 } })
+    return true
+  } catch (err) {
+    if (classifySaturation(err) === 429) return true // key is valid, just rate-limited
+    if (isKeyError(err)) throw keyErr()
+    throw Object.assign(new Error(`Could not validate the key: ${err?.message || 'unknown error'}`), { status: 400, code: 'BYOK_INVALID' })
+  }
+}
 
 const RETRY = new Set([500, 502, 503, 504])
 // Only Gemini 2.5 reliably accepts an explicit thinkingBudget (incl. 0 to
@@ -57,7 +91,7 @@ export async function generateJSON({ model, system, prompt, temperature, maxOutp
  */
 export async function runToolAgent({ model, system, prompt, temperature, maxSteps = 6, tools, onStep = () => {} }) {
   const functionDeclarations = Object.values(tools).map((t) => t.declaration)
-  const genModel = client.getGenerativeModel({
+  const genModel = getClient().getGenerativeModel({
     model,
     systemInstruction: system,
     tools: [{ functionDeclarations }],
@@ -70,7 +104,13 @@ export async function runToolAgent({ model, system, prompt, temperature, maxStep
   let message = prompt
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const res = await withRetry(() => chat.sendMessage(message))
+    let res
+    try {
+      res = await withRetry(() => chat.sendMessage(message))
+    } catch (err) {
+      if (isKeyError(err)) throw keyErr()
+      throw err
+    }
     const calls = res.response.functionCalls?.() || []
 
     if (!calls.length) {
@@ -121,6 +161,7 @@ async function runChain({ model, system, prompt, temperature, maxOutputTokens, u
       )
       return { data: safeParseJson(text), modelUsed: modelName, sources, grounded }
     } catch (err) {
+      if (isKeyError(err)) throw keyErr()
       if (classifySaturation(err)) {
         lastSaturation = err
         continue
@@ -157,13 +198,13 @@ async function callModel({ modelName, system, prompt, temperature, maxOutputToke
 
   let res
   try {
-    res = await client.getGenerativeModel(modelParams).generateContent(prompt)
+    res = await getClient().getGenerativeModel(modelParams).generateContent(prompt)
   } catch (err) {
     // Grounding unavailable for this key/model → retry once without the tool so
     // the agent still returns an (ungrounded) answer instead of failing.
     if (useSearch && isToolError(err)) {
       const fallbackCfg = { ...generationConfig, responseMimeType: 'application/json' }
-      res = await client.getGenerativeModel({ model: modelName, systemInstruction: system, generationConfig: fallbackCfg }).generateContent(prompt)
+      res = await getClient().getGenerativeModel({ model: modelName, systemInstruction: system, generationConfig: fallbackCfg }).generateContent(prompt)
       return { text: res.response.text(), sources: [], grounded: false }
     }
     throw err

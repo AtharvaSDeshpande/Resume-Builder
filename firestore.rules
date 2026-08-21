@@ -42,6 +42,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // BYOK secrets: each user's own Gemini API key, encrypted (AES-256-GCM)
+    // before storage. Accessed ONLY via the Admin SDK on the server — the client
+    // can never read or write it, so the (already encrypted) secret is never
+    // exposed to any browser.
+    match /userSecrets/{uid} {
+      allow read, write: if false;
+    }
+
     // Daily usage counter. The client may only write its own doc, and the
     // stored count can never exceed that user's daily limit — so the quota
     // cannot be tampered above the allowance.

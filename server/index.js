@@ -2,13 +2,16 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { config, assertLlmConfigured } from './config.js'
+import { config } from './config.js'
 import { initAdmin, isQuotaEnabled } from './auth/firebaseAdmin.js'
 import { requireAuth } from './auth/requireAuth.js'
+import { attachUserKey, assertUserLlm } from './auth/withUserKey.js'
 import { getAllQuota, reserve, refund } from './quota.js'
 import { runTailorAgent } from './agent/tailorAgent.js'
 import { critiqueResume } from './agent/critique.js'
 import { runAgent, isAgent, AGENTS } from './agents/index.js'
+import { validateApiKey } from './llm/gemini.js'
+import { saveUserKey, getKeyStatus, deleteUserKey, byokAvailable } from './services/userKeys.js'
 
 initAdmin()
 
@@ -37,10 +40,49 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     llmConfigured: Boolean(config.llm.apiKey),
+    byok: byokAvailable(),
     quotaEnforced: isQuotaEnabled(),
     authRequired: !config.firebase.authDisabled,
     models: config.llm.models,
   })
+})
+
+// ---- BYOK: the user's own Gemini API key (encrypted at rest) --------------
+
+// Whether the user has a key set (masked hint only — the secret is never
+// returned). Drives the mandatory first-run setup screen.
+app.get('/api/byok', requireAuth, async (req, res) => {
+  try {
+    res.json(await getKeyStatus(req.user.uid))
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Set / replace the user's key. We validate it live, then store it encrypted.
+app.post('/api/byok', requireAuth, async (req, res) => {
+  try {
+    if (!byokAvailable()) {
+      return res.status(503).json({ error: 'Key storage is not configured on the server.', code: 'BYOK_UNAVAILABLE' })
+    }
+    const apiKey = String(req.body?.apiKey || '').trim()
+    if (!apiKey) return res.status(400).json({ error: 'Paste your Gemini API key.', code: 'BAD_REQUEST' })
+    await validateApiKey(apiKey) // throws BYOK_INVALID if Google rejects it
+    await saveUserKey(req.user.uid, apiKey)
+    res.json({ ok: true, ...(await getKeyStatus(req.user.uid)) })
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Could not save the key.', code: err.code })
+  }
+})
+
+// Remove the stored key (user is signing out of BYOK / switching accounts).
+app.delete('/api/byok', requireAuth, async (req, res) => {
+  try {
+    await deleteUserKey(req.user.uid)
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.get('/api/quota', requireAuth, async (req, res) => {
@@ -57,11 +99,11 @@ app.get('/api/agents', requireAuth, (_req, res) => {
   res.json({ agents: Object.values(AGENTS).map((a) => ({ id: a.id, label: a.label, agentic: Boolean(a.agentic) })) })
 })
 
-app.post('/api/agents/:id', requireAuth, async (req, res) => {
+app.post('/api/agents/:id', requireAuth, attachUserKey, async (req, res) => {
   const id = req.params.id
   let reserved = false
   try {
-    assertLlmConfigured()
+    assertUserLlm()
     if (!isAgent(id)) return res.status(404).json({ error: 'Unknown agent.', code: 'UNKNOWN_AGENT' })
     reserved = (await reserve(req.user.uid, id)).enforced // per-agent daily quota
     const result = await runAgent(id, req.body || {})
@@ -75,10 +117,10 @@ app.post('/api/agents/:id', requireAuth, async (req, res) => {
 
 // Standalone JD-fit scoring — critique only (one cheap call), no tailoring and
 // no quota. Lets the UI re-check a résumé's fit score on demand.
-app.post('/api/score', requireAuth, async (req, res) => {
+app.post('/api/score', requireAuth, attachUserKey, async (req, res) => {
   let reserved = false
   try {
-    assertLlmConfigured()
+    assertUserLlm()
     const { profile, jobDescription } = req.body || {}
     if (!profile || !jobDescription) {
       return res.status(400).json({ error: 'A résumé profile and job description are required.', code: 'BAD_REQUEST' })
@@ -93,12 +135,12 @@ app.post('/api/score', requireAuth, async (req, res) => {
 })
 
 // The tailoring agent SSE endpoint
-app.post('/api/tailor', requireAuth, async (req, res) => {
+app.post('/api/tailor', requireAuth, attachUserKey, async (req, res) => {
   const { baseResume, jobDescription, additionalContext } = req.body || {}
 
   let reserved = false
   try {
-    assertLlmConfigured()
+    assertUserLlm()
     if (!baseResume || !jobDescription) {
       throw Object.assign(new Error('A base résumé and job description are required.'), { status: 400, code: 'BAD_REQUEST' })
     }
@@ -146,5 +188,6 @@ app.listen(config.port, () => {
   console.log(`\n  Résumé agent backend → http://localhost:${config.port}`)
   console.log(`  • llm  : ${config.llm.apiKey ? `tailor=${config.llm.models.tailor}` : 'NOT configured'}`)
   console.log(`  • auth : ${config.firebase.authDisabled ? 'DISABLED (dev)' : 'Firebase ID tokens'}`)
-  console.log(`  • quota: ${isQuotaEnabled() ? 'enforced (Admin Firestore)' : 'NOT enforced (no creds)'}\n`)
+  console.log(`  • quota: ${isQuotaEnabled() ? 'enforced (Admin Firestore)' : 'NOT enforced (no creds)'}`)
+  console.log(`  • byok : ${byokAvailable() ? 'enabled (users bring their own key, encrypted)' : 'disabled (needs admin creds + BYOK_ENC_KEY)'}\n`)
 })

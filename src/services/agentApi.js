@@ -33,6 +33,11 @@ export const agentApi = {
   score: (body) => authFetch('/api/score', { method: 'POST', body: JSON.stringify(body) }),
   // Run a career-prep agent (company intel / placement buddy / industry news).
   runAgent: (id, body) => authFetch(`/api/agents/${id}`, { method: 'POST', body: JSON.stringify(body) }),
+
+  // BYOK — the user's own Gemini API key (stored encrypted server-side).
+  byokStatus: () => authFetch('/api/byok'),
+  byokSave: (apiKey) => authFetch('/api/byok', { method: 'POST', body: JSON.stringify({ apiKey }) }),
+  byokRemove: () => authFetch('/api/byok', { method: 'DELETE' }),
 }
 
 /**
