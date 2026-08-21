@@ -1,5 +1,4 @@
-import { config } from '../config.js'
-import { generateJSON } from '../llm/gemini.js'
+import { generateJSON, resolveBestModel } from '../llm/gemini.js'
 import { buildCompanyIntelPrompt, buildPlacementBuddyPrompt } from '../prompts/agents.js'
 import { runPlacementBuddy } from './placementBuddyAgent.js'
 import { runIndustryNews } from './industryNewsAgent.js'
@@ -28,10 +27,10 @@ export async function runAgent(id, input) {
   // True agents own their control flow.
   if (typeof agent.run === 'function') return agent.run(input || {})
 
-  // Prompt agents: uniform single JSON call.
+  // Prompt agents: uniform single JSON call on the best available model.
   const { system, prompt } = agent.build(input || {})
   const { data, sources, modelUsed, grounded } = await generateJSON({
-    model: config.llm.models.tailor,
+    model: await resolveBestModel(),
     system,
     prompt,
     useSearch: agent.useSearch,

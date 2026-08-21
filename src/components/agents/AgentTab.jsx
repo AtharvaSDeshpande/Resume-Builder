@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useData } from '../../data/AppData.jsx'
+import { useAiActivity } from '../../ai/AiActivity.jsx'
 import { agentApi } from '../../services/agentApi.js'
 import { formatDate } from '../../utils/format.js'
+import { prettyModel } from '../../utils/modelName.js'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
 import { Spinner } from '../ui/ProgressPanel.jsx'
@@ -14,23 +16,28 @@ import { Spinner } from '../ui/ProgressPanel.jsx'
  */
 export default function AgentTab({ position, agentDef }) {
   const { saveAgentResult } = useData()
+  const { busy, run: runExclusive } = useAiActivity()
   const [running, setRunning] = useState(false)
   const [error, setError] = useState(null)
 
   const saved = position.agents?.[agentDef.id]
   const View = agentDef.View
+  // Disabled while THIS agent runs, or any other AI task is active.
+  const blocked = busy && !running
 
   async function run() {
     setRunning(true)
     setError(null)
     try {
-      const result = await agentApi.runAgent(agentDef.id, {
-        company: position.company,
-        jobDescription: position.jobDescription,
-        requirements: position.feedback?.requirements,
-        profile: position.tailored?.profile,
+      await runExclusive(async () => {
+        const result = await agentApi.runAgent(agentDef.id, {
+          company: position.company,
+          jobDescription: position.jobDescription,
+          requirements: position.feedback?.requirements,
+          profile: position.tailored?.profile,
+        })
+        await saveAgentResult(position.id, agentDef.id, result)
       })
-      await saveAgentResult(position.id, agentDef.id, result)
     } catch (err) {
       setError(err.message || 'The agent could not complete.')
     } finally {
@@ -44,7 +51,11 @@ export default function AgentTab({ position, agentDef }) {
         <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
           <Spinner size={22} />
           <p className="text-sm font-medium text-slate-600">{agentDef.running}</p>
-          <p className="text-xs text-slate-400">This can take up to a minute.</p>
+          <p className="text-xs text-slate-400">
+            {agentDef.agentic
+              ? 'This agent researches step-by-step — usually 1–2 minutes (longer on Pro).'
+              : 'Usually 30–90 seconds (longer on Pro models).'}
+          </p>
         </div>
       </Card>
     )
@@ -59,9 +70,10 @@ export default function AgentTab({ position, agentDef }) {
           </div>
           <h3 className="text-base font-bold text-slate-800">{agentDef.label}</h3>
           <p className="max-w-md text-sm text-slate-500">{agentDef.tagline}</p>
-          <Button className="mt-3" onClick={run}>
+          <Button className="mt-3" onClick={run} disabled={blocked}>
             {agentDef.cta}
           </Button>
+          {blocked && <p className="mt-2 text-[11px] text-slate-400">Another AI task is running — this unlocks when it finishes.</p>}
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
         </div>
       </Card>
@@ -73,9 +85,10 @@ export default function AgentTab({ position, agentDef }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-slate-400">
           Generated {saved.generatedAtMs ? formatDate(saved.generatedAtMs) : ''}
+          {saved.model ? ` · ${prettyModel(saved.model)}` : ''}
           {saved.grounded ? ' · web-grounded' : ''}
         </p>
-        <Button size="sm" variant="secondary" onClick={run}>
+        <Button size="sm" variant="secondary" onClick={run} disabled={blocked}>
           Refresh
         </Button>
       </div>

@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { Routes, Route, NavLink, Link, useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../data/AppData.jsx'
+import { useAiActivity } from '../ai/AiActivity.jsx'
 import { customizeResume } from '../ai/customizeResume.js'
 import { agentApi } from '../services/agentApi.js'
+import { prettyModel } from '../utils/modelName.js'
 import restrictions from '../data/restrictions.json'
 import { validateProfile } from '../utils/validation.js'
 import { computeResumeDiff } from '../utils/resumeDiff.js'
@@ -30,11 +32,12 @@ export default function PositionDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { positions, positionsLoading, masterResumes, setStatus, saveTailoring, saveScore, updatePosition } = useData()
+  const { busy, run: runExclusive } = useAiActivity()
   const position = positions.find((p) => p.id === id)
 
   // Tailoring state lives here (shared across tabs) so a run in progress reflects
   // everywhere and the Résumé/Feedback tabs only render once it's complete.
-  const [tailoring, setTailoring] = useState({ running: false, progress: null, error: null })
+  const [tailoring, setTailoring] = useState({ running: false, progress: null, error: null, model: null })
 
   if (positionsLoading && !position) return <Centered>Loading…</Centered>
   if (!position)
@@ -48,36 +51,39 @@ export default function PositionDetailPage() {
     )
 
   async function runTailor(base, additionalContext = '') {
-    setTailoring({ running: true, progress: { label: 'Starting…' }, error: null })
+    setTailoring({ running: true, progress: { label: 'Starting…' }, error: null, model: null })
     try {
-      const res = await customizeResume({
-        baseResume: base.profile,
-        jobDescription: position.jobDescription,
-        additionalContext,
-        onProgress: (p) => setTailoring((s) => ({ ...s, progress: p })),
+      await runExclusive(async () => {
+        const res = await customizeResume({
+          baseResume: base.profile,
+          jobDescription: position.jobDescription,
+          additionalContext,
+          onProgress: (p) =>
+            setTailoring((s) => ({ ...s, progress: p, model: p.stage === 'model' && p.model ? p.model : s.model })),
+        })
+        await saveTailoring(position.id, {
+          baseResumeId: base.id,
+          additionalContext: additionalContext.trim(),
+          tailored: {
+            profile: res.profile,
+            changeLog: res.changeLog || [],
+            corrections: res.corrections || [],
+            model: res.model,
+            promptVersion: res.promptVersion,
+          },
+          feedback: {
+            score: res.score ?? null,
+            jdCoverage: res.jdCoverage || { covered: [], missing: [] },
+            weaknesses: res.weaknesses || [],
+            requirements: res.requirements || {},
+            company: res.company || position.company,
+          },
+        })
       })
-      await saveTailoring(position.id, {
-        baseResumeId: base.id,
-        additionalContext: additionalContext.trim(),
-        tailored: {
-          profile: res.profile,
-          changeLog: res.changeLog || [],
-          corrections: res.corrections || [],
-          model: res.model,
-          promptVersion: res.promptVersion,
-        },
-        feedback: {
-          score: res.score ?? null,
-          jdCoverage: res.jdCoverage || { covered: [], missing: [] },
-          weaknesses: res.weaknesses || [],
-          requirements: res.requirements || {},
-          company: res.company || position.company,
-        },
-      })
-      setTailoring({ running: false, progress: null, error: null })
+      setTailoring({ running: false, progress: null, error: null, model: null })
       navigate('resume')
     } catch (err) {
-      setTailoring({ running: false, progress: null, error: err.message || 'Tailoring failed.' })
+      setTailoring({ running: false, progress: null, error: err.message || 'Tailoring failed.', model: null })
     }
   }
 
@@ -92,12 +98,14 @@ export default function PositionDetailPage() {
   async function recheckScore() {
     const profile = position.tailored?.profile
     if (!profile) return
-    const res = await agentApi.score({ profile, jobDescription: position.jobDescription })
-    await saveScore(position.id, {
-      ...(position.feedback || {}),
-      score: res.score,
-      jdCoverage: res.jdCoverage,
-      weaknesses: res.weaknesses,
+    await runExclusive(async () => {
+      const res = await agentApi.score({ profile, jobDescription: position.jobDescription })
+      await saveScore(position.id, {
+        ...(position.feedback || {}),
+        score: res.score,
+        jdCoverage: res.jdCoverage,
+        weaknesses: res.weaknesses,
+      })
     })
   }
 
@@ -123,8 +131,12 @@ export default function PositionDetailPage() {
       </div>
 
       {tailoring.running && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
           <ProgressPanel progress={tailoring.progress} />
+          <p className="text-[11px] text-slate-400">
+            {tailoring.model ? `Using ${prettyModel(tailoring.model)} · ` : ''}
+            This usually takes 1–3 minutes (longer on Pro models).
+          </p>
         </div>
       )}
       {tailoring.error && !tailoring.running && (
@@ -158,6 +170,7 @@ export default function PositionDetailPage() {
                 position={position}
                 masterResumes={masterResumes}
                 tailoring={tailoring}
+                busy={busy}
                 onRun={runTailor}
                 onStatus={(s) => setStatus(position.id, s)}
                 onGoTo={navigate}
@@ -165,7 +178,7 @@ export default function PositionDetailPage() {
             }
           />
           <Route path="resume" element={<ResumeTab position={position} tailoring={tailoring} onEditSection={editResumeSection} />} />
-          <Route path="feedback" element={<FeedbackTab position={position} tailoring={tailoring} onRecheck={recheckScore} />} />
+          <Route path="feedback" element={<FeedbackTab position={position} tailoring={tailoring} busy={busy} onRecheck={recheckScore} />} />
           {position.tailored &&
             AGENT_TABS.map((a) => (
               <Route key={a.id} path={a.path} element={<AgentTab position={position} agentDef={a} />} />
@@ -178,10 +191,12 @@ export default function PositionDetailPage() {
 
 /* ------------------------------------------------------------------ tabs */
 
-function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGoTo }) {
+function OverviewTab({ position, masterResumes, tailoring, busy, onRun, onStatus, onGoTo }) {
   const [baseId, setBaseId] = useState(masterResumes[0]?.id || '')
   const [context, setContext] = useState(position.additionalContext || '')
   const base = masterResumes.find((r) => r.id === baseId) || masterResumes[0]
+  // Disabled while tailoring here, or any other AI task is running elsewhere.
+  const locked = tailoring.running || busy
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -226,7 +241,7 @@ function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGo
                 <select
                   value={base?.id}
                   onChange={(e) => setBaseId(e.target.value)}
-                  disabled={tailoring.running}
+                  disabled={locked}
                   className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20"
                 >
                   {masterResumes.map((r) => (
@@ -243,7 +258,7 @@ function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGo
                 <textarea
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
-                  disabled={tailoring.running}
+                  disabled={locked}
                   rows={4}
                   placeholder="Any specific tweaks to guide this run — e.g. “emphasise my SQL and dashboarding work”, “lead with the fintech project”, “tone down the ML wording”. The agent will apply these as far as they’re truthful and relevant to the role."
                   className="w-full resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-relaxed focus:border-accent focus:ring-2 focus:ring-accent/20"
@@ -252,9 +267,12 @@ function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGo
                   The agent tries to incorporate these, but makes the final call based on relevance to the job.
                 </span>
               </label>
-              <Button className="w-full" disabled={tailoring.running || !base} onClick={() => onRun(base, context)}>
+              <Button className="w-full" disabled={locked || !base} onClick={() => onRun(base, context)}>
                 {tailoring.running ? 'Tailoring…' : position.tailored ? 'Re-tailor & get feedback' : 'Tailor & Get Feedback'}
               </Button>
+              {busy && !tailoring.running && (
+                <p className="text-center text-[11px] text-slate-400">Another AI task is running — this unlocks when it finishes.</p>
+              )}
             </div>
           )}
         </Card>
@@ -337,9 +355,10 @@ function ResumeTab({ position, tailoring, onEditSection }) {
   )
 }
 
-function FeedbackTab({ position, tailoring, onRecheck }) {
+function FeedbackTab({ position, tailoring, busy, onRecheck }) {
   const [rechecking, setRechecking] = useState(false)
   const [error, setError] = useState(null)
+  const blocked = busy && !rechecking
 
   if (tailoring.running) return <TailoringPlaceholder label="Scoring your résumé against the role…" />
 
@@ -360,7 +379,7 @@ function FeedbackTab({ position, tailoring, onRecheck }) {
       {position.tailored && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-slate-500">Reflects your latest résumé, including manual edits.</p>
-          <Button size="sm" variant="secondary" disabled={rechecking} onClick={recheck}>
+          <Button size="sm" variant="secondary" disabled={rechecking || blocked} onClick={recheck}>
             {rechecking ? 'Re-checking…' : 'Re-check score'}
           </Button>
         </div>

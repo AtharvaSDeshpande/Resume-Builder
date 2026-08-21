@@ -7,6 +7,7 @@ import { initAdmin, isQuotaEnabled } from './auth/firebaseAdmin.js'
 import { requireAuth } from './auth/requireAuth.js'
 import { attachUserKey, assertUserLlm } from './auth/withUserKey.js'
 import { getAllQuota, reserve, refund } from './quota.js'
+import { acquire, release } from './agent/inflight.js'
 import { runTailorAgent } from './agent/tailorAgent.js'
 import { critiqueResume } from './agent/critique.js'
 import { runAgent, isAgent, AGENTS } from './agents/index.js'
@@ -39,7 +40,6 @@ app.use(
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
-    llmConfigured: Boolean(config.llm.apiKey),
     byok: byokAvailable(),
     quotaEnforced: isQuotaEnabled(),
     authRequired: !config.firebase.authDisabled,
@@ -101,53 +101,71 @@ app.get('/api/agents', requireAuth, (_req, res) => {
 
 app.post('/api/agents/:id', requireAuth, attachUserKey, async (req, res) => {
   const id = req.params.id
+  const uid = req.user.uid
   let reserved = false
+  let locked = false
   try {
     assertUserLlm()
     if (!isAgent(id)) return res.status(404).json({ error: 'Unknown agent.', code: 'UNKNOWN_AGENT' })
-    reserved = (await reserve(req.user.uid, id)).enforced // per-agent daily quota
+    acquire(uid); locked = true // block concurrent AI triggers for this user
+    reserved = (await reserve(uid, id)).enforced // per-agent daily quota
     const result = await runAgent(id, req.body || {})
-    res.json({ ...result, quota: await getAllQuota(req.user.uid) })
+    res.json({ ...result, quota: await getAllQuota(uid) })
   } catch (err) {
-    if (reserved) await refund(req.user.uid, id)
+    if (reserved) await refund(uid, id)
     if (err.status >= 500 && !err.code) console.error(`[agent:${id}] error:`, err)
     res.status(err.status || 500).json({ error: err.message || 'Agent failed.', code: err.code })
+  } finally {
+    if (locked) release(uid)
   }
 })
 
 // Standalone JD-fit scoring — critique only (one cheap call), no tailoring and
 // no quota. Lets the UI re-check a résumé's fit score on demand.
 app.post('/api/score', requireAuth, attachUserKey, async (req, res) => {
+  const uid = req.user.uid
   let reserved = false
+  let locked = false
   try {
     assertUserLlm()
     const { profile, jobDescription } = req.body || {}
     if (!profile || !jobDescription) {
       return res.status(400).json({ error: 'A résumé profile and job description are required.', code: 'BAD_REQUEST' })
     }
-    reserved = (await reserve(req.user.uid, 'score')).enforced // per-API daily quota
+    acquire(uid); locked = true
+    reserved = (await reserve(uid, 'score')).enforced // per-API daily quota
     const { score, jdCoverage, weaknesses } = await critiqueResume({ profile, jobDescription })
-    res.json({ score, jdCoverage, weaknesses, quota: await getAllQuota(req.user.uid) })
+    res.json({ score, jdCoverage, weaknesses, quota: await getAllQuota(uid) })
   } catch (err) {
-    if (reserved) await refund(req.user.uid, 'score')
+    if (reserved) await refund(uid, 'score')
     res.status(err.status || 500).json({ error: err.message || 'Scoring failed.', code: err.code })
+  } finally {
+    if (locked) release(uid)
   }
 })
 
 // The tailoring agent SSE endpoint
 app.post('/api/tailor', requireAuth, attachUserKey, async (req, res) => {
   const { baseResume, jobDescription, additionalContext } = req.body || {}
+  const uid = req.user.uid
 
   let reserved = false
+  let locked = false
   try {
     assertUserLlm()
     if (!baseResume || !jobDescription) {
       throw Object.assign(new Error('A base résumé and job description are required.'), { status: 400, code: 'BAD_REQUEST' })
     }
-    reserved = (await reserve(req.user.uid, 'tailor')).enforced
+    acquire(uid); locked = true // block concurrent AI triggers for this user
+    reserved = (await reserve(uid, 'tailor')).enforced
   } catch (err) {
+    if (locked) release(uid)
     return res.status(err.status || 500).json({ error: err.message || 'Tailoring failed.', code: err.code })
   }
+
+  // Release the single-flight slot no matter how the stream ends (incl. client disconnect).
+  const done = () => { if (locked) { release(uid); locked = false } }
+  res.on('close', done)
 
   // Begin the event stream.
   res.setHeader('Content-Type', 'text/event-stream')
@@ -158,14 +176,16 @@ app.post('/api/tailor', requireAuth, attachUserKey, async (req, res) => {
 
   try {
     const result = await runTailorAgent({ baseResume, jobDescription, additionalContext, onProgress: (p) => send('progress', p) })
-    const quota = await getAllQuota(req.user.uid)
+    const quota = await getAllQuota(uid)
     send('result', { ...result, quota })
     res.end()
   } catch (err) {
-    if (reserved) await refund(req.user.uid, 'tailor')
+    if (reserved) await refund(uid, 'tailor')
     if (!err.code) console.error('[tailor] error:', err)
     send('error', { error: err.message || 'Tailoring failed.', code: err.code })
     res.end()
+  } finally {
+    done()
   }
 })
 
@@ -186,7 +206,7 @@ app.get('*', (req, res) => {
 
 app.listen(config.port, () => {
   console.log(`\n  Résumé agent backend → http://localhost:${config.port}`)
-  console.log(`  • llm  : ${config.llm.apiKey ? `tailor=${config.llm.models.tailor}` : 'NOT configured'}`)
+  console.log(`  • llm  : BYOK (per-user key) · prefers ${config.llm.preferredModels[0]}`)
   console.log(`  • auth : ${config.firebase.authDisabled ? 'DISABLED (dev)' : 'Firebase ID tokens'}`)
   console.log(`  • quota: ${isQuotaEnabled() ? 'enforced (Admin Firestore)' : 'NOT enforced (no creds)'}`)
   console.log(`  • byok : ${byokAvailable() ? 'enabled (users bring their own key, encrypted)' : 'disabled (needs admin creds + BYOK_ENC_KEY)'}\n`)

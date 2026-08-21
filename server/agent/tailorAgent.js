@@ -3,7 +3,7 @@ import { validateProfile } from '../../src/utils/validation.js'
 import { applyIntegrityGuards } from '../../src/ai/integrityGuards.js'
 import { buildSystemPrompt, buildUserPrompt, promptMeta } from '../../src/ai/resumeCustomization.js'
 import { config } from '../config.js'
-import { generateJSON } from '../llm/gemini.js'
+import { generateJSON, resolveBestModel, prettyModel } from '../llm/gemini.js'
 import { buildJdParsePrompt, buildImprovePrompt } from '../prompts/agentPrompts.js'
 import { critiqueResume } from './critique.js'
 
@@ -24,6 +24,12 @@ export async function runTailorAgent({ baseResume, jobDescription, additionalCon
   if (!baseResume || typeof baseResume !== 'object') throw bad('A base résumé is required.')
   if (!jobDescription || !String(jobDescription).trim()) throw bad('A job description is required.')
 
+  // 0) Pick the best model the user's key can use (Pro if available), and tell
+  //    the user which one is doing the heavy lifting.
+  onProgress({ stage: 'model', label: 'Checking which Gemini model your key can use…' })
+  const genModel = await resolveBestModel()
+  onProgress({ stage: 'model', model: genModel, label: `Using ${prettyModel(genModel)} — the best model available on your key.` })
+
   // 1) Parse the JD (best-effort — the tailor still works without it).
   onProgress({ stage: 'parse', label: 'Reading the job description…' })
   let requirements = {}
@@ -43,7 +49,7 @@ export async function runTailorAgent({ baseResume, jobDescription, additionalCon
 
   onProgress({ stage: 'tailor', label: 'Tailoring your résumé to the role…' })
   const tailorOut = await generateJSON({
-    model: config.llm.models.tailor,
+    model: genModel,
     system: buildSystemPrompt(),
     prompt: buildUserPrompt({ baseResume, jobDescription: augmentedJd, restrictions, additionalContext }),
   })
@@ -81,7 +87,7 @@ export async function runTailorAgent({ baseResume, jobDescription, additionalCon
     let improved
     try {
       improved = await generateJSON({
-        model: config.llm.models.tailor,
+        model: genModel,
         prompt: buildImprovePrompt({
           baseResume,
           tailoredProfile: best.profile,

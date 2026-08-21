@@ -1,5 +1,5 @@
 import { config } from '../config.js'
-import { runToolAgent, generateJSON } from '../llm/gemini.js'
+import { runToolAgent, generateJSON, resolveBestModel } from '../llm/gemini.js'
 import { buildPlacementBuddyPrompt } from '../prompts/agents.js'
 
 /**
@@ -74,7 +74,7 @@ export async function runPlacementBuddy(input = {}) {
   }
 
   const { data, steps, sources, modelUsed } = await runToolAgent({
-    model: config.llm.models.tailor,
+    model: await resolveBestModel(),
     system,
     prompt: base.prompt,
     tools,

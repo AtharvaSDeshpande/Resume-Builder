@@ -29,16 +29,18 @@ export const config = {
   },
 
   llm: {
-    apiKey: process.env.GEMINI_API_KEY || '',
-    // Task-routed models (quality where it matters, cheap elsewhere). Defaults
-    // use the `-latest` aliases, which survive Google's model deprecations and
-    // are available on the free tier. Pro models (gemini-2.5-pro, gemini-3.x-pro)
-    // require a BILLING-ENABLED key — a free-tier key returns 429 for them.
+    // BYOK only: every Gemini call uses the signed-in user's own key (resolved
+    // per-request from their encrypted secret). There is NO server-held API key.
+    //
+    // `preferredModels` is tried best-first per request: a Pro model is used when
+    // the user's key can access it, otherwise it falls back to Flash. These are
+    // model NAMES only (not keys).
     models: {
-      tailor: process.env.GEMINI_TAILOR_MODEL || 'gemini-flash-latest',
+      // Cheap models for the auxiliary stages (JD parse, critique/scoring).
       parse: process.env.GEMINI_PARSE_MODEL || 'gemini-flash-lite-latest',
       critique: process.env.GEMINI_CRITIQUE_MODEL || 'gemini-flash-lite-latest',
     },
+    preferredModels: list(process.env.GEMINI_PREFERRED_MODELS, 'gemini-2.5-pro,gemini-flash-latest,gemini-flash-lite-latest'),
     fallbackModels: list(process.env.GEMINI_FALLBACK_MODELS, 'gemini-flash-latest,gemini-flash-lite-latest'),
     temperature: Number(process.env.LLM_TEMPERATURE ?? 0.2),
     maxOutputTokens: Number(process.env.LLM_MAX_TOKENS ?? 8192),
@@ -52,10 +54,4 @@ export const config = {
     targetScore: Number(process.env.AGENT_TARGET_SCORE ?? 85),
     skillsPolicy: process.env.INTEGRITY_SKILLS_POLICY || 'grounded',
   },
-}
-
-export function assertLlmConfigured() {
-  if (!config.llm.apiKey) {
-    throw Object.assign(new Error('Set GEMINI_API_KEY in server/.env'), { status: 503, code: 'LLM_NOT_CONFIGURED' })
-  }
 }

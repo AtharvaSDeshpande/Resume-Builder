@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext.jsx'
 import { ApiKeyProvider, useApiKey } from './byok/ApiKeyContext.jsx'
 import { DataProvider } from './data/AppData.jsx'
+import { AiActivityProvider } from './ai/AiActivity.jsx'
 import SignInScreen from './components/SignInScreen.jsx'
 import AppShell from './components/AppShell.jsx'
 import ApiKeySetup from './pages/ApiKeySetup.jsx'
@@ -31,6 +32,7 @@ function KeyGated() {
 
   return (
     <DataProvider>
+      <AiActivityProvider>
       <AppShell>
         <Routes>
           <Route path="/" element={<Navigate to="/positions" replace />} />
@@ -42,6 +44,7 @@ function KeyGated() {
           <Route path="*" element={<Navigate to="/positions" replace />} />
         </Routes>
       </AppShell>
+      </AiActivityProvider>
     </DataProvider>
   )
 }

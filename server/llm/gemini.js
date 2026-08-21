@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { jsonrepair } from 'jsonrepair'
 import { config } from '../config.js'
-import { getActiveUserKey } from './keyContext.js'
+import { getActiveUserKey, keyStore } from './keyContext.js'
 
 /**
  * Thin Gemini client for the agent. Each call names the model to use (task
@@ -12,11 +12,49 @@ import { getActiveUserKey } from './keyContext.js'
  * Gemini key, so quota/billing is theirs), falling back to the server key only
  * when BYOK isn't configured.
  */
-const activeKey = () => getActiveUserKey() || config.llm.apiKey || 'missing'
-const getClient = () => new GoogleGenerativeAI(activeKey())
+const getClient = () => {
+  const key = getActiveUserKey()
+  if (!key) throw Object.assign(new Error('No API key for this request.'), { status: 400, code: 'BYOK_REQUIRED' })
+  return new GoogleGenerativeAI(key)
+}
 
-/** Does the current request have a usable key (user's own, or the server's)? */
-export const hasUsableKey = () => Boolean(getActiveUserKey() || config.llm.apiKey)
+/** Does the current request carry the user's own key? */
+export const hasUsableKey = () => Boolean(getActiveUserKey())
+
+/** Friendly label for a Gemini model id, e.g. "gemini-2.5-pro" → "Gemini 2.5 Pro". */
+export function prettyModel(id = '') {
+  const m = id.replace(/^gemini-/, '').replace(/-latest$/, '')
+  const tier = /pro/.test(m) ? 'Pro' : /flash-lite|lite/.test(m) ? 'Flash-Lite' : /flash/.test(m) ? 'Flash' : ''
+  const ver = (m.match(/^(\d+(?:\.\d+)?)/) || [])[1]
+  return ['Gemini', ver, tier].filter(Boolean).join(' ') || id
+}
+
+/**
+ * Pick the BEST model the user's key can actually use, trying `candidates`
+ * best-first (Pro before Flash) with a tiny probe call. The result is cached on
+ * the request's key context so every stage of a run reuses the same model
+ * without re-probing. Falls back to the last candidate if none probe cleanly.
+ */
+export async function resolveBestModel(candidates = config.llm.preferredModels) {
+  const store = keyStore.getStore()
+  if (store?.bestModel) return store.bestModel
+  let chosen = candidates[candidates.length - 1]
+  for (const m of candidates) {
+    try {
+      await getClient().getGenerativeModel({ model: m }).generateContent({
+        contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      })
+      chosen = m
+      break
+    } catch (err) {
+      if (isKeyError(err)) throw keyErr()
+      // 429/permission/unknown-model on this key → not usable, try the next.
+    }
+  }
+  if (store) store.bestModel = chosen
+  return chosen
+}
 
 /** A rejected/invalid API key (as opposed to a rate-limit or overload). */
 const isKeyError = (err) => {

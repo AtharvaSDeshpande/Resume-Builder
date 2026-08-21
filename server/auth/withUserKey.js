@@ -1,4 +1,3 @@
-import { config } from '../config.js'
 import { getUserKey, byokAvailable } from '../services/userKeys.js'
 import { runWithKey, getActiveUserKey } from '../llm/keyContext.js'
 
@@ -20,16 +19,14 @@ export async function attachUserKey(req, res, next) {
 }
 
 /**
- * Assert the current request can call Gemini. When BYOK is available, the user
- * MUST have set their own key (we never silently fall back to the server key and
- * bill the owner). In dev without BYOK, the server key is allowed.
+ * Assert the current request can call Gemini. This is BYOK-only: the request
+ * MUST carry the user's own decrypted key — there is no server key to fall back
+ * to, so the owner is never billed for a user's usage.
  */
 export function assertUserLlm() {
   if (getActiveUserKey()) return
-  if (byokAvailable()) {
-    throw Object.assign(new Error('Add your Gemini API key in Settings to use AI features.'), { status: 400, code: 'BYOK_REQUIRED' })
+  if (!byokAvailable()) {
+    throw Object.assign(new Error('Key storage is not configured on the server.'), { status: 503, code: 'BYOK_UNAVAILABLE' })
   }
-  if (!config.llm.apiKey) {
-    throw Object.assign(new Error('No Gemini API key configured.'), { status: 503, code: 'LLM_NOT_CONFIGURED' })
-  }
+  throw Object.assign(new Error('Add your Gemini API key in Settings to use AI features.'), { status: 400, code: 'BYOK_REQUIRED' })
 }

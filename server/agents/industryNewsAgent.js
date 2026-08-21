@@ -1,5 +1,4 @@
-import { config } from '../config.js'
-import { generateJSON } from '../llm/gemini.js'
+import { generateJSON, resolveBestModel } from '../llm/gemini.js'
 import { fetchRecentNews } from '../tools/news.js'
 import { buildIndustryNewsSummaryPrompt, inferIndustryQuery } from '../prompts/agents.js'
 
@@ -15,6 +14,7 @@ import { buildIndustryNewsSummaryPrompt, inferIndustryQuery } from '../prompts/a
  */
 export async function runIndustryNews(input = {}) {
   const query = inferIndustryQuery(input)
+  const model = await resolveBestModel()
 
   let items = []
   try {
@@ -26,14 +26,14 @@ export async function runIndustryNews(input = {}) {
   // Grounded path: summarise the REAL fetched items.
   if (items.length) {
     const { system, prompt } = buildIndustryNewsSummaryPrompt({ input, query, items })
-    const { data } = await generateJSON({ model: config.llm.models.tailor, system, prompt })
+    const { data } = await generateJSON({ model: model, system, prompt })
     const sources = items.map((it) => ({ title: `${it.title} — ${it.source || 'source'}`, url: it.url }))
     return {
       agentId: 'industryNews',
       data: reconcileDates(data, items),
       sources,
       grounded: true,
-      model: config.llm.models.tailor,
+      model: model,
       generatedAtMs: Date.now(),
     }
   }
@@ -41,8 +41,8 @@ export async function runIndustryNews(input = {}) {
   // Fallback: no feed items — let the model produce best-effort recent context.
   const { buildIndustryNewsPrompt } = await import('../prompts/agents.js')
   const { system, prompt } = buildIndustryNewsPrompt(input)
-  const { data } = await generateJSON({ model: config.llm.models.tailor, system, prompt })
-  return { agentId: 'industryNews', data, sources: [], grounded: false, model: config.llm.models.tailor, generatedAtMs: Date.now() }
+  const { data } = await generateJSON({ model: model, system, prompt })
+  return { agentId: 'industryNews', data, sources: [], grounded: false, model: model, generatedAtMs: Date.now() }
 }
 
 /** Keep model output honest: attach the real feed URL/date to each article by title match. */
