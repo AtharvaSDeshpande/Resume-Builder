@@ -1,5 +1,27 @@
 import React from 'react'
 
+/**
+ * Edit-trigger handlers for an editable section. Desktop uses double-click;
+ * touch devices get a manual double-tap detector (mobile browsers don't fire a
+ * reliable `dblclick`). A fresh closure per render keeps each section's tap
+ * timer independent.
+ */
+function editHandlers(onEdit) {
+  let lastTap = 0
+  return {
+    className: 'resume-editable',
+    onDoubleClick: onEdit,
+    onTouchEnd: (e) => {
+      const now = Date.now()
+      if (now - lastTap < 320) {
+        e.preventDefault()
+        onEdit()
+      }
+      lastTap = now
+    },
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * Metrics reverse-engineered from the source PDF (measured at 96dpi, where
  * 1 PDF-point = 1.3333 CSS px). Kept here as named constants so the render
@@ -303,11 +325,7 @@ function Section({ sectionKey, restrictions, profile, ctx }) {
   const headerGap = cfg.type === 'headline' ? 6 : cfg.type === 'bullets' ? M.headerToBody : 11
 
   const edit = ctx.editable
-    ? {
-        className: 'resume-editable',
-        title: `Double-click to edit ${cfg.label || sectionKey}`,
-        onDoubleClick: () => ctx.onEditSection(sectionKey),
-      }
+    ? { title: `Double-click or double-tap to edit ${cfg.label || sectionKey}`, ...editHandlers(() => ctx.onEditSection(sectionKey)) }
     : {}
 
   return (
@@ -348,13 +366,7 @@ export default function ResumeCanvas({
   const { columnWidthMm } = restrictions.layout
 
   const editProps = (sectionKey, label) =>
-    editable
-      ? {
-          className: 'resume-editable',
-          title: `Double-click to edit ${label}`,
-          onDoubleClick: () => onEditSection(sectionKey),
-        }
-      : {}
+    editable ? { title: `Double-click or double-tap to edit ${label}`, ...editHandlers(() => onEditSection(sectionKey)) } : {}
 
   return (
     <DiffContext.Provider value={{ diffMode, diffMarks }}>

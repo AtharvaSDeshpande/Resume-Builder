@@ -69,19 +69,52 @@ export default function ApplicationsPage() {
         ))}
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(r) => r.id}
-        onRowClick={(r) => navigate(`/positions/${r.id}`)}
-        empty={
+      {(() => {
+        const empty =
           positionsLoading
             ? 'Loading…'
             : filter === 'all'
               ? 'No positions yet — create one from the Positions page.'
               : `No ${statusLabel(filter).toLowerCase()} applications.`
-        }
-      />
+        return (
+          <>
+            {/* Table on tablet/desktop; stacked cards on phones (no side-scroll). */}
+            <div className="hidden sm:block">
+              <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => navigate(`/positions/${r.id}`)} empty={empty} />
+            </div>
+            <div className="space-y-2.5 sm:hidden">
+              {rows.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-400">{empty}</div>
+              ) : (
+                rows.map((r) => <ApplicationCard key={r.id} row={r} onOpen={() => navigate(`/positions/${r.id}`)} onStatus={(s) => setStatus(r.id, s)} />)
+              )}
+            </div>
+          </>
+        )
+      })()}
+    </div>
+  )
+}
+
+/** Compact, tappable application row for phones. */
+function ApplicationCard({ row, onOpen, onStatus }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <button onClick={onOpen} className="min-w-0 flex-1 text-left">
+          <div className="truncate font-semibold text-slate-800">{row.company || 'Untitled'}</div>
+          <div className="truncate text-[11px] text-slate-400">{firstLine(row.jobDescription)}</div>
+        </button>
+        {typeof row.feedback?.score === 'number' && <ScoreChip score={row.feedback.score} />}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className="text-[11px] text-slate-400">
+          {row.interviewDate ? `Interview ${formatDate(row.interviewDate)}` : 'No interview date'}
+        </span>
+        <div onClick={(e) => e.stopPropagation()}>
+          <StatusSelect status={row.status} onChange={onStatus} />
+        </div>
+      </div>
     </div>
   )
 }

@@ -98,7 +98,7 @@ function ResumePreview({ record, onBack }) {
         <Button size="sm" variant="secondary" className="ml-auto" onClick={() => window.print()}>
           Print / Save PDF
         </Button>
-        <span className="text-[11px] text-slate-400">Double-click a section to edit.</span>
+        <span className="text-[11px] text-slate-400">Double-click or double-tap a section to edit.</span>
       </div>
 
       <div className="canvas-scroll rounded-2xl bg-slate-100 p-4">

@@ -318,7 +318,7 @@ function ResumeTab({ position, tailoring, onEditSection }) {
         <Button size="sm" variant="secondary" onClick={() => window.print()}>
           Print / Save PDF
         </Button>
-        <span className="text-[11px] text-slate-400">Double-click a section to edit.</span>
+        <span className="text-[11px] text-slate-400">Double-click or double-tap a section to edit.</span>
         {diffMode && diff && (
           <span className="ml-auto text-[11px] text-slate-400">
             <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-400/70 align-middle" />
