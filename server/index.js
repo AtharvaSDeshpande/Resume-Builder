@@ -7,6 +7,8 @@ import { initAdmin, isQuotaEnabled } from './auth/firebaseAdmin.js'
 import { requireAuth } from './auth/requireAuth.js'
 import { getQuota, reserveTailor, refundTailor } from './quota.js'
 import { runTailorAgent } from './agent/tailorAgent.js'
+import { critiqueResume } from './agent/critique.js'
+import { runAgent, isAgent, AGENTS } from './agents/index.js'
 
 initAdmin()
 
@@ -46,6 +48,40 @@ app.get('/api/quota', requireAuth, async (req, res) => {
     res.json(await getQuota(req.user.uid))
   } catch (err) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// Career-prep agents (company intel, placement buddy, industry news). Each runs
+// its own JSON-driven workflow; grounded agents pull live web info. No quota.
+app.get('/api/agents', requireAuth, (_req, res) => {
+  res.json({ agents: Object.values(AGENTS).map((a) => ({ id: a.id, label: a.label, useSearch: a.useSearch })) })
+})
+
+app.post('/api/agents/:id', requireAuth, async (req, res) => {
+  try {
+    assertLlmConfigured()
+    if (!isAgent(req.params.id)) return res.status(404).json({ error: 'Unknown agent.', code: 'UNKNOWN_AGENT' })
+    const result = await runAgent(req.params.id, req.body || {})
+    res.json(result)
+  } catch (err) {
+    if (err.status >= 500 && !err.code) console.error(`[agent:${req.params.id}] error:`, err)
+    res.status(err.status || 500).json({ error: err.message || 'Agent failed.', code: err.code })
+  }
+})
+
+// Standalone JD-fit scoring — critique only (one cheap call), no tailoring and
+// no quota. Lets the UI re-check a résumé's fit score on demand.
+app.post('/api/score', requireAuth, async (req, res) => {
+  try {
+    assertLlmConfigured()
+    const { profile, jobDescription } = req.body || {}
+    if (!profile || !jobDescription) {
+      return res.status(400).json({ error: 'A résumé profile and job description are required.', code: 'BAD_REQUEST' })
+    }
+    const { score, jdCoverage, weaknesses } = await critiqueResume({ profile, jobDescription })
+    res.json({ score, jdCoverage, weaknesses })
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Scoring failed.', code: err.code })
   }
 })
 

@@ -4,7 +4,8 @@ import { applyIntegrityGuards } from '../../src/ai/integrityGuards.js'
 import { buildSystemPrompt, buildUserPrompt, promptMeta } from '../../src/ai/resumeCustomization.js'
 import { config } from '../config.js'
 import { generateJSON } from '../llm/gemini.js'
-import { buildJdParsePrompt, buildCritiquePrompt, buildImprovePrompt } from '../prompts/agentPrompts.js'
+import { buildJdParsePrompt, buildImprovePrompt } from '../prompts/agentPrompts.js'
+import { critiqueResume } from './critique.js'
 
 /**
  * The tailoring agent. Optimises for output quality/relevance via distinct
@@ -134,27 +135,8 @@ function pickBetter(a, b) {
   return (a.score ?? 0) >= (b.score ?? 0) ? a : b
 }
 
-async function critique(tailoredProfile, jobDescription, requirements) {
-  try {
-    const { data } = await generateJSON({
-      model: config.llm.models.critique,
-      prompt: buildCritiquePrompt({
-        tailoredProfile,
-        jobDescription,
-        requirements,
-        restrictionsGuidelines: restrictions.writingGuidelines,
-      }),
-    })
-    return {
-      score: typeof data?.score === 'number' ? data.score : null,
-      jdCoverage: data?.jdCoverage || { covered: [], missing: [] },
-      weaknesses: Array.isArray(data?.weaknesses) ? data.weaknesses : [],
-      suggestions: Array.isArray(data?.suggestions) ? data.suggestions : [],
-    }
-  } catch {
-    return { score: null, jdCoverage: { covered: [], missing: [] }, weaknesses: [], suggestions: [] }
-  }
-}
+const critique = (profile, jobDescription, requirements) =>
+  critiqueResume({ profile, jobDescription, requirements })
 
 /** Just the numeric limits for the improve prompt (keeps it compact). */
 function compactLimits() {

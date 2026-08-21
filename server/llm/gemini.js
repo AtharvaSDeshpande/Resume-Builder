@@ -17,18 +17,39 @@ const acceptsThinkingBudget = (m) => /^gemini-2\.5/.test(m) && !m.includes('-pro
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * @param {{ model: string, system?: string, prompt: string,
- *           temperature?: number, maxOutputTokens?: number }} args
- * @returns {Promise<{ data: object, modelUsed: string }>}
+ * @param {{ model: string, system?: string, prompt: string, temperature?: number,
+ *           maxOutputTokens?: number, useSearch?: boolean }} args
+ * @returns {Promise<{ data: object, modelUsed: string, sources: {title,url}[], grounded: boolean }>}
+ *
+ * `useSearch` enables Google Search grounding (for agents that need current/web
+ * info). Grounded calls can't use JSON response-mode, so we parse tolerantly and
+ * return any cited sources. If grounding isn't available for the key/model, the
+ * call gracefully degrades to the model's own knowledge.
  */
-export async function generateJSON({ model, system, prompt, temperature, maxOutputTokens }) {
+export async function generateJSON({ model, system, prompt, temperature, maxOutputTokens, useSearch = false }) {
+  try {
+    return await runChain({ model, system, prompt, temperature, maxOutputTokens, useSearch })
+  } catch (err) {
+    // Grounding often has a separate (sometimes zero) free-tier quota. If a
+    // grounded call is rate-limited or unsupported, fall back to the model's own
+    // knowledge so the agent still returns useful (if less current) insight.
+    if (useSearch && (classifySaturation(err) || isToolError(err))) {
+      return runChain({ model, system, prompt, temperature, maxOutputTokens, useSearch: false })
+    }
+    throw err
+  }
+}
+
+async function runChain({ model, system, prompt, temperature, maxOutputTokens, useSearch }) {
   const chain = [...new Set([model, ...config.llm.fallbackModels])]
   let lastSaturation = null
 
   for (const modelName of chain) {
     try {
-      const text = await withRetry(() => callModel({ modelName, system, prompt, temperature, maxOutputTokens }))
-      return { data: safeParseJson(text), modelUsed: modelName }
+      const { text, sources, grounded } = await withRetry(() =>
+        callModel({ modelName, system, prompt, temperature, maxOutputTokens, useSearch })
+      )
+      return { data: safeParseJson(text), modelUsed: modelName, sources, grounded }
     } catch (err) {
       if (classifySaturation(err)) {
         lastSaturation = err
@@ -48,26 +69,60 @@ export async function generateJSON({ model, system, prompt, temperature, maxOutp
   )
 }
 
-async function callModel({ modelName, system, prompt, temperature, maxOutputTokens }) {
+async function callModel({ modelName, system, prompt, temperature, maxOutputTokens, useSearch }) {
   const generationConfig = {
     temperature: temperature ?? config.llm.temperature,
     maxOutputTokens: maxOutputTokens ?? config.llm.maxOutputTokens,
-    responseMimeType: 'application/json',
   }
-  // Thinking control — only Gemini 2.5 (non-pro) accepts an explicit budget.
-  // Other models (3.x, pro) manage thinking themselves; maxOutputTokens gives
-  // them room. This avoids the 400 that 3.x flash returns for thinkingBudget 0.
+  // JSON response-mode conflicts with the search tool, so only use it ungrounded.
+  if (!useSearch) generationConfig.responseMimeType = 'application/json'
+
   const budget = config.llm.thinkingBudget
   if (acceptsThinkingBudget(modelName) && Number.isFinite(budget) && budget >= 0) {
     generationConfig.thinkingConfig = { thinkingBudget: budget }
   }
-  const gm = client.getGenerativeModel({ model: modelName, systemInstruction: system, generationConfig })
-  const res = await gm.generateContent(prompt)
+
+  const modelParams = { model: modelName, systemInstruction: system, generationConfig }
+  if (useSearch) modelParams.tools = [{ googleSearch: {} }]
+
+  let res
+  try {
+    res = await client.getGenerativeModel(modelParams).generateContent(prompt)
+  } catch (err) {
+    // Grounding unavailable for this key/model → retry once without the tool so
+    // the agent still returns an (ungrounded) answer instead of failing.
+    if (useSearch && isToolError(err)) {
+      const fallbackCfg = { ...generationConfig, responseMimeType: 'application/json' }
+      res = await client.getGenerativeModel({ model: modelName, systemInstruction: system, generationConfig: fallbackCfg }).generateContent(prompt)
+      return { text: res.response.text(), sources: [], grounded: false }
+    }
+    throw err
+  }
+
   const finish = res.response.candidates?.[0]?.finishReason
   if (finish === 'MAX_TOKENS') {
     throw Object.assign(new Error('Output token limit hit — raise LLM_MAX_TOKENS.'), { code: 'LLM_TRUNCATED', status: 502 })
   }
-  return res.response.text()
+  return { text: res.response.text(), sources: extractSources(res.response), grounded: useSearch }
+}
+
+const isToolError = (err) => {
+  const s = `${err?.status || ''} ${err?.message || ''}`.toLowerCase()
+  return err?.status === 400 || /tool|search|not supported|invalid argument/.test(s)
+}
+
+/** Pull unique {title,url} from grounding metadata (search-cited sources). */
+function extractSources(response) {
+  const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+  const seen = new Set()
+  const out = []
+  for (const c of chunks) {
+    const url = c?.web?.uri
+    if (!url || seen.has(url)) continue
+    seen.add(url)
+    out.push({ title: c.web.title || url, url })
+  }
+  return out
 }
 
 async function withRetry(fn, max = 2) {
