@@ -29,6 +29,16 @@ export default function IndustryNewsView({ data, sources, grounded }) {
                   <span className="font-semibold">Impact:</span> {a.impact}
                 </div>
               )}
+              {(a.url || a.source) && (
+                <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+                  {a.source && <span>{a.source}</span>}
+                  {a.url && (
+                    <a href={a.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+                      Read →
+                    </a>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>

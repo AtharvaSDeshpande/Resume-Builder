@@ -3,10 +3,26 @@ import Card from '../ui/Card.jsx'
 import { Bullets, Chips, Prose, Sources } from './parts.jsx'
 
 /** Structured render of the Placement Buddy agent's JSON. */
-export default function PlacementBuddyView({ data, sources, grounded }) {
+export default function PlacementBuddyView({ data, sources, grounded, steps }) {
   if (!data) return null
   return (
     <div className="space-y-4">
+      {steps?.length > 0 && (
+        <details className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
+          <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            Agent activity · {steps.length} step{steps.length > 1 ? 's' : ''}
+          </summary>
+          <ol className="mt-2 space-y-1">
+            {steps.map((s, i) => (
+              <li key={i} className="flex gap-2 text-xs text-slate-500">
+                <span className="font-mono text-[10px] text-accent">{s.tool}</span>
+                <span className="text-slate-500">{s.summary || JSON.stringify(s.args)}</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
       {(data.roleFraming || data.verdict) && (
         <Card>
           {data.roleFraming && <Prose>{data.roleFraming}</Prose>}

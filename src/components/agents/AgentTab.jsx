@@ -80,7 +80,7 @@ export default function AgentTab({ position, agentDef }) {
         </Button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
-      <View data={saved.data} sources={saved.sources} grounded={saved.grounded} />
+      <View data={saved.data} sources={saved.sources} grounded={saved.grounded} steps={saved.steps} />
     </div>
   )
 }

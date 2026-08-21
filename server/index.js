@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { config, assertLlmConfigured } from './config.js'
 import { initAdmin, isQuotaEnabled } from './auth/firebaseAdmin.js'
 import { requireAuth } from './auth/requireAuth.js'
-import { getQuota, reserveTailor, refundTailor } from './quota.js'
+import { getAllQuota, reserve, refund } from './quota.js'
 import { runTailorAgent } from './agent/tailorAgent.js'
 import { critiqueResume } from './agent/critique.js'
 import { runAgent, isAgent, AGENTS } from './agents/index.js'
@@ -45,26 +45,30 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/quota', requireAuth, async (req, res) => {
   try {
-    res.json(await getQuota(req.user.uid))
+    res.json(await getAllQuota(req.user.uid))
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
 // Career-prep agents (company intel, placement buddy, industry news). Each runs
-// its own JSON-driven workflow; grounded agents pull live web info. No quota.
+// its own workflow; each draws from its OWN daily quota (see POST below).
 app.get('/api/agents', requireAuth, (_req, res) => {
-  res.json({ agents: Object.values(AGENTS).map((a) => ({ id: a.id, label: a.label, useSearch: a.useSearch })) })
+  res.json({ agents: Object.values(AGENTS).map((a) => ({ id: a.id, label: a.label, agentic: Boolean(a.agentic) })) })
 })
 
 app.post('/api/agents/:id', requireAuth, async (req, res) => {
+  const id = req.params.id
+  let reserved = false
   try {
     assertLlmConfigured()
-    if (!isAgent(req.params.id)) return res.status(404).json({ error: 'Unknown agent.', code: 'UNKNOWN_AGENT' })
-    const result = await runAgent(req.params.id, req.body || {})
-    res.json(result)
+    if (!isAgent(id)) return res.status(404).json({ error: 'Unknown agent.', code: 'UNKNOWN_AGENT' })
+    reserved = (await reserve(req.user.uid, id)).enforced // per-agent daily quota
+    const result = await runAgent(id, req.body || {})
+    res.json({ ...result, quota: await getAllQuota(req.user.uid) })
   } catch (err) {
-    if (err.status >= 500 && !err.code) console.error(`[agent:${req.params.id}] error:`, err)
+    if (reserved) await refund(req.user.uid, id)
+    if (err.status >= 500 && !err.code) console.error(`[agent:${id}] error:`, err)
     res.status(err.status || 500).json({ error: err.message || 'Agent failed.', code: err.code })
   }
 })
@@ -72,22 +76,25 @@ app.post('/api/agents/:id', requireAuth, async (req, res) => {
 // Standalone JD-fit scoring — critique only (one cheap call), no tailoring and
 // no quota. Lets the UI re-check a résumé's fit score on demand.
 app.post('/api/score', requireAuth, async (req, res) => {
+  let reserved = false
   try {
     assertLlmConfigured()
     const { profile, jobDescription } = req.body || {}
     if (!profile || !jobDescription) {
       return res.status(400).json({ error: 'A résumé profile and job description are required.', code: 'BAD_REQUEST' })
     }
+    reserved = (await reserve(req.user.uid, 'score')).enforced // per-API daily quota
     const { score, jdCoverage, weaknesses } = await critiqueResume({ profile, jobDescription })
-    res.json({ score, jdCoverage, weaknesses })
+    res.json({ score, jdCoverage, weaknesses, quota: await getAllQuota(req.user.uid) })
   } catch (err) {
+    if (reserved) await refund(req.user.uid, 'score')
     res.status(err.status || 500).json({ error: err.message || 'Scoring failed.', code: err.code })
   }
 })
 
 // The tailoring agent SSE endpoint
 app.post('/api/tailor', requireAuth, async (req, res) => {
-  const { baseResume, jobDescription } = req.body || {}
+  const { baseResume, jobDescription, additionalContext } = req.body || {}
 
   let reserved = false
   try {
@@ -95,7 +102,7 @@ app.post('/api/tailor', requireAuth, async (req, res) => {
     if (!baseResume || !jobDescription) {
       throw Object.assign(new Error('A base résumé and job description are required.'), { status: 400, code: 'BAD_REQUEST' })
     }
-    reserved = (await reserveTailor(req.user.uid)).enforced
+    reserved = (await reserve(req.user.uid, 'tailor')).enforced
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message || 'Tailoring failed.', code: err.code })
   }
@@ -108,12 +115,12 @@ app.post('/api/tailor', requireAuth, async (req, res) => {
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
 
   try {
-    const result = await runTailorAgent({ baseResume, jobDescription, onProgress: (p) => send('progress', p) })
-    const quota = await getQuota(req.user.uid)
+    const result = await runTailorAgent({ baseResume, jobDescription, additionalContext, onProgress: (p) => send('progress', p) })
+    const quota = await getAllQuota(req.user.uid)
     send('result', { ...result, quota })
     res.end()
   } catch (err) {
-    if (reserved) await refundTailor(req.user.uid)
+    if (reserved) await refund(req.user.uid, 'tailor')
     if (!err.code) console.error('[tailor] error:', err)
     send('error', { error: err.message || 'Tailoring failed.', code: err.code })
     res.end()

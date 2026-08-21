@@ -65,9 +65,10 @@ export function updatePosition(id, patch) {
 export const setStatus = (id, status) => updatePosition(id, { status })
 
 /** Save a tailoring run (résumé + feedback incl. fit score) onto the position. */
-export function saveTailoring(id, { baseResumeId, tailored, feedback }) {
+export function saveTailoring(id, { baseResumeId, tailored, feedback, additionalContext = '' }) {
   return updatePosition(id, {
     baseResumeId,
+    additionalContext,
     tailored: { ...tailored, tailoredAtMs: Date.now() },
     feedback,
   })

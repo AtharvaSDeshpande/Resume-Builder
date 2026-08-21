@@ -40,6 +40,76 @@ export async function generateJSON({ model, system, prompt, temperature, maxOutp
   }
 }
 
+/**
+ * A genuine tool-using agent loop (ReAct-style function calling). Unlike
+ * `generateJSON` — one prompt in, one JSON out — here the MODEL decides which
+ * tools to call, with what arguments, in what order, and WHEN it has gathered
+ * enough to finish. That model-directed control flow + dynamic stopping is what
+ * makes this an agent rather than a fixed prompt/workflow.
+ *
+ * @param {{
+ *   model: string, system: string, prompt: string, temperature?: number,
+ *   maxSteps?: number,
+ *   tools: Record<string, { declaration: object, handler: (args:object)=>Promise<{result:any, sources?:{title,url}[], summary?:string}> }>,
+ *   onStep?: (step: {tool:string, args:object, summary?:string}) => void,
+ * }} args
+ * @returns {Promise<{ data: object, steps: object[], sources: {title,url}[], modelUsed: string }>}
+ */
+export async function runToolAgent({ model, system, prompt, temperature, maxSteps = 6, tools, onStep = () => {} }) {
+  const functionDeclarations = Object.values(tools).map((t) => t.declaration)
+  const genModel = client.getGenerativeModel({
+    model,
+    systemInstruction: system,
+    tools: [{ functionDeclarations }],
+    generationConfig: { temperature: temperature ?? config.llm.temperature, maxOutputTokens: config.llm.maxOutputTokens },
+  })
+  const chat = genModel.startChat()
+
+  const steps = []
+  const sources = []
+  let message = prompt
+
+  for (let step = 0; step < maxSteps; step += 1) {
+    const res = await withRetry(() => chat.sendMessage(message))
+    const calls = res.response.functionCalls?.() || []
+
+    if (!calls.length) {
+      // No tool call → the agent is done and returned its final answer.
+      return { data: safeParseJson(res.response.text()), steps, sources, modelUsed: model }
+    }
+
+    // Execute every requested tool and feed the results back for the next turn.
+    const responses = []
+    for (const call of calls) {
+      const tool = tools[call.name]
+      let payload
+      if (!tool) {
+        payload = { error: `Unknown tool "${call.name}".` }
+      } else {
+        try {
+          const out = await tool.handler(call.args || {})
+          payload = out?.result ?? out ?? {}
+          if (Array.isArray(out?.sources)) for (const s of out.sources) if (!sources.some((x) => x.url === s.url)) sources.push(s)
+          const trace = { tool: call.name, args: call.args || {}, summary: out?.summary }
+          steps.push(trace)
+          onStep(trace)
+        } catch (err) {
+          payload = { error: err?.message || 'Tool failed.' }
+          steps.push({ tool: call.name, args: call.args || {}, summary: `error: ${payload.error}` })
+        }
+      }
+      responses.push({ functionResponse: { name: call.name, response: { data: payload } } })
+    }
+    message = responses
+  }
+
+  // Ran out of steps — ask the model to synthesise a final answer from what it has.
+  const closing = await withRetry(() =>
+    chat.sendMessage('You have gathered enough. Respond NOW with the final JSON object only — no more tool calls.')
+  )
+  return { data: safeParseJson(closing.response.text()), steps, sources, modelUsed: model }
+}
+
 async function runChain({ model, system, prompt, temperature, maxOutputTokens, useSearch }) {
   const chain = [...new Set([model, ...config.llm.fallbackModels])]
   let lastSaturation = null

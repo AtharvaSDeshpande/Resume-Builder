@@ -104,6 +104,53 @@ export function buildPlacementBuddyPrompt(input) {
   return { system, prompt: contextBlock(input) + '\n\nProduce the JSON now.' }
 }
 
+/** Infer a compact news-search query from the company + role/JD. */
+export function inferIndustryQuery({ company, jobDescription, requirements } = {}) {
+  const role = requirements?.role || requirements?.title || ''
+  const industry = requirements?.industry || ''
+  const parts = [company, industry || role].filter(Boolean)
+  if (parts.length) return parts.join(' ')
+  // Last resort: first strong noun-ish words from the JD.
+  const jd = (jobDescription || '').replace(/\s+/g, ' ').trim()
+  return jd.split(' ').slice(0, 6).join(' ') || 'technology industry'
+}
+
+/* -------------------------- 3a. Industry News — summarise REAL fetched items */
+export function buildIndustryNewsSummaryPrompt({ input, query, items }) {
+  const today = new Date().toISOString().slice(0, 10)
+  const feed = items
+    .map((it, i) => `${i + 1}. [${it.date}] ${it.title} (${it.source || 'source'}) — ${it.url}`)
+    .join('\n')
+  const system = [
+    `You are a business-news analyst preparing a candidate for an interview. Today is ${today}.`,
+    'You are given REAL, recent news headlines (already fetched from a news feed) for the target industry/company.',
+    'Summarise ONLY these items — do NOT invent stories, headlines, dates, or outlets. Use each item’s given date.',
+    'For each, write a short plain-English abstract a non-expert can grasp, and explain the impact + why it matters for someone interviewing for this role.',
+    JSON_ONLY,
+    'Schema:',
+    JSON.stringify(
+      {
+        industry: 'the industry inferred from the role/company',
+        asOf: today,
+        articles: [{ headline: 'string (match the source headline)', date: 'YYYY-MM-DD', summary: 'simple 1–3 sentence abstract', impact: 'why it matters / likely impact' }],
+        themes: ['cross-cutting themes across the stories'],
+        interviewAngles: ['how the candidate can reference these to impress'],
+      },
+      null,
+      2
+    ),
+  ].join('\n')
+  const prompt = [
+    contextBlock(input),
+    '',
+    `===== REAL RECENT HEADLINES (search: "${query}") =====`,
+    feed,
+    '',
+    'Summarise these into the JSON schema now.',
+  ].join('\n')
+  return { system, prompt }
+}
+
 /* -------------------------------------------- 3. Industry News (grounded, 7d) */
 export function buildIndustryNewsPrompt(input) {
   const today = new Date().toISOString().slice(0, 10)

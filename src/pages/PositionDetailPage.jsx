@@ -47,16 +47,18 @@ export default function PositionDetailPage() {
       </Centered>
     )
 
-  async function runTailor(base) {
+  async function runTailor(base, additionalContext = '') {
     setTailoring({ running: true, progress: { label: 'Starting…' }, error: null })
     try {
       const res = await customizeResume({
         baseResume: base.profile,
         jobDescription: position.jobDescription,
+        additionalContext,
         onProgress: (p) => setTailoring((s) => ({ ...s, progress: p })),
       })
       await saveTailoring(position.id, {
         baseResumeId: base.id,
+        additionalContext: additionalContext.trim(),
         tailored: {
           profile: res.profile,
           changeLog: res.changeLog || [],
@@ -178,6 +180,7 @@ export default function PositionDetailPage() {
 
 function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGoTo }) {
   const [baseId, setBaseId] = useState(masterResumes[0]?.id || '')
+  const [context, setContext] = useState(position.additionalContext || '')
   const base = masterResumes.find((r) => r.id === baseId) || masterResumes[0]
 
   return (
@@ -233,7 +236,23 @@ function OverviewTab({ position, masterResumes, tailoring, onRun, onStatus, onGo
                   ))}
                 </select>
               </label>
-              <Button className="w-full" disabled={tailoring.running || !base} onClick={() => onRun(base)}>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-600">
+                  Additional context <span className="font-normal text-slate-400">(optional)</span>
+                </span>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  disabled={tailoring.running}
+                  rows={4}
+                  placeholder="Any specific tweaks to guide this run — e.g. “emphasise my SQL and dashboarding work”, “lead with the fintech project”, “tone down the ML wording”. The agent will apply these as far as they’re truthful and relevant to the role."
+                  className="w-full resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-relaxed focus:border-accent focus:ring-2 focus:ring-accent/20"
+                />
+                <span className="mt-1 block text-[11px] text-slate-400">
+                  The agent tries to incorporate these, but makes the final call based on relevance to the job.
+                </span>
+              </label>
+              <Button className="w-full" disabled={tailoring.running || !base} onClick={() => onRun(base, context)}>
                 {tailoring.running ? 'Tailoring…' : position.tailored ? 'Re-tailor & get feedback' : 'Tailor & Get Feedback'}
               </Button>
             </div>
