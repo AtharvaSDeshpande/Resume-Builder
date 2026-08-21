@@ -60,12 +60,17 @@ export function buildCritiquePrompt({ tailoredProfile, jobDescription, requireme
  * Stage 4 — apply the critique's suggestions to the resume, staying truthful and
  * within limits. Reuses the base résumé as ground truth.
  */
-export function buildImprovePrompt({ baseResume, tailoredProfile, suggestions, missingKeywords, restrictions }) {
+export function buildImprovePrompt({ baseResume, tailoredProfile, suggestions, missingKeywords, restrictions, additionalContext }) {
+  const ctx = (additionalContext || '').trim()
   return [
     'Improve the TAILORED RESUME using the REVIEW SUGGESTIONS, while keeping every claim truthful to the BASE RESUME and every limit in RESTRICTIONS.',
     'Weave in any MISSING KEYWORDS only where they accurately describe real experience. Keep the same JSON shape as the tailored resume.',
+    ctx
+      ? 'Also keep honouring the ADDITIONAL CANDIDATE CONTEXT below as far as it is truthful and relevant to the role — you remain the final judge of how much of it to apply.'
+      : '',
     '',
     'Return ONLY this JSON: { "profile": <improved resume>, "changeLog": [ { "section": <string>, "change": <string>, "rationale": <string> } ] }',
+    ctx ? '\n===== ADDITIONAL CANDIDATE CONTEXT (user guidance) =====\n' + ctx : '',
     '',
     '===== REVIEW SUGGESTIONS =====',
     JSON.stringify(suggestions, null, 2),

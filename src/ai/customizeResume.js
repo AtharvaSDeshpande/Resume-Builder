@@ -9,6 +9,6 @@ import { agentApi } from '../services/agentApi.js'
  * server-side. The return shape is a superset of the old one, adding
  * `requirements`, `jdCoverage`, `score`, and `quota`.
  */
-export function customizeResume({ baseResume, jobDescription, onProgress }) {
-  return agentApi.tailor({ baseResume, jobDescription }, onProgress)
+export function customizeResume({ baseResume, jobDescription, additionalContext, onProgress }) {
+  return agentApi.tailor({ baseResume, jobDescription, additionalContext }, onProgress)
 }

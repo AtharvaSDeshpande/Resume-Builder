@@ -93,7 +93,7 @@ export function buildSystemPrompt() {
   ].join('\n')
 }
 
-export function buildUserPrompt({ baseResume, jobDescription, restrictions }) {
+export function buildUserPrompt({ baseResume, jobDescription, restrictions, additionalContext }) {
   return [
     'Tailor the BASE RESUME below to the JOB DESCRIPTION, obeying every rule in the system prompt and every limit in RESTRICTIONS.',
     '',
@@ -105,8 +105,27 @@ export function buildUserPrompt({ baseResume, jobDescription, restrictions }) {
     '',
     '===== JOB DESCRIPTION (target role) =====',
     (jobDescription || '').trim(),
+    additionalContextBlock(additionalContext),
     '',
     'Now produce the JSON object described in the OUTPUT CONTRACT.',
+  ].join('\n')
+}
+
+/**
+ * Optional user-supplied guidance for a (re-)tailor run. The candidate can ask
+ * for specific tweaks; the agent should honour them as far as possible but stays
+ * the final arbiter — applying each only when it is truthful AND relevant to the
+ * role, never at the cost of a HARD RULE or a limit.
+ */
+export function additionalContextBlock(additionalContext) {
+  const text = (additionalContext || '').trim()
+  if (!text) return ''
+  return [
+    '',
+    '===== ADDITIONAL CANDIDATE CONTEXT (user guidance / requested tweaks) =====',
+    text,
+    '',
+    'Weigh this guidance seriously and incorporate it AS MUCH AS POSSIBLE — but YOU make the final call on each request. Apply a request only to the extent it is (a) truthful given the BASE RESUME and (b) genuinely relevant to THIS job. Down-weight or skip anything that would reduce relevance, breach a HARD RULE, exceed a limit, or read as keyword-stuffing. For each requested tweak, record in the changeLog whether you applied it fully, partially, or not — and why (grounded in job relevance).',
   ].join('\n')
 }
 

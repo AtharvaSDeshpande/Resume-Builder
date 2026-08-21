@@ -3,8 +3,9 @@ import { validateProfile } from '../../src/utils/validation.js'
 import { applyIntegrityGuards } from '../../src/ai/integrityGuards.js'
 import { buildSystemPrompt, buildUserPrompt, promptMeta } from '../../src/ai/resumeCustomization.js'
 import { config } from '../config.js'
-import { generateJSON } from '../llm/gemini.js'
-import { buildJdParsePrompt, buildCritiquePrompt, buildImprovePrompt } from '../prompts/agentPrompts.js'
+import { generateJSON, resolveBestModel, prettyModel } from '../llm/gemini.js'
+import { buildJdParsePrompt, buildImprovePrompt } from '../prompts/agentPrompts.js'
+import { critiqueResume } from './critique.js'
 
 /**
  * The tailoring agent. Optimises for output quality/relevance via distinct
@@ -19,9 +20,15 @@ import { buildJdParsePrompt, buildCritiquePrompt, buildImprovePrompt } from '../
  * Returns the best draft plus the parsed requirements, JD coverage, and score,
  * so the UI can show *why* it's a good fit.
  */
-export async function runTailorAgent({ baseResume, jobDescription, onProgress = () => {} }) {
+export async function runTailorAgent({ baseResume, jobDescription, additionalContext = '', onProgress = () => {} }) {
   if (!baseResume || typeof baseResume !== 'object') throw bad('A base résumé is required.')
   if (!jobDescription || !String(jobDescription).trim()) throw bad('A job description is required.')
+
+  // 0) Pick the best model the user's key can use (Pro if available), and tell
+  //    the user which one is doing the heavy lifting.
+  onProgress({ stage: 'model', label: 'Checking which Gemini model your key can use…' })
+  const genModel = await resolveBestModel()
+  onProgress({ stage: 'model', model: genModel, label: `Using ${prettyModel(genModel)} — the best model available on your key.` })
 
   // 1) Parse the JD (best-effort — the tailor still works without it).
   onProgress({ stage: 'parse', label: 'Reading the job description…' })
@@ -42,9 +49,9 @@ export async function runTailorAgent({ baseResume, jobDescription, onProgress = 
 
   onProgress({ stage: 'tailor', label: 'Tailoring your résumé to the role…' })
   const tailorOut = await generateJSON({
-    model: config.llm.models.tailor,
+    model: genModel,
     system: buildSystemPrompt(),
-    prompt: buildUserPrompt({ baseResume, jobDescription: augmentedJd, restrictions }),
+    prompt: buildUserPrompt({ baseResume, jobDescription: augmentedJd, restrictions, additionalContext }),
   })
   const modelUsed = tailorOut.modelUsed
   const company = typeof tailorOut.data?.targetCompany === 'string' ? tailorOut.data.targetCompany.trim() : ''
@@ -59,23 +66,35 @@ export async function runTailorAgent({ baseResume, jobDescription, onProgress = 
   let review = await critique(current.profile, jobDescription, requirements)
   let best = snapshot(current, changeLog, review)
 
-  // 5) Improvement loop (targeted, bounded).
+  // 5) Improvement loop — bounded, but the MODEL decides whether each further
+  //    pass is worth it (and what to prioritise), instead of a fixed score gate.
+  //    A hard validation error always forces another pass; otherwise the agent
+  //    reflects and may stop early to avoid over-tailoring.
   let attempts = 1
-  while (
-    attempts <= config.agent.maxImproveAttempts &&
-    (best.validation.count > 0 || (best.score ?? 0) < config.agent.targetScore)
-  ) {
-    onProgress({ stage: 'improve', label: `Refining for a stronger match (pass ${attempts})…`, attempt: attempts })
+  while (attempts <= config.agent.maxImproveAttempts) {
+    const mustFix = best.validation.count > 0
+    let focus = ''
+    if (!mustFix) {
+      const decision = await decideNextAction({ review, attempt: attempts, maxAttempts: config.agent.maxImproveAttempts })
+      if (!decision.continue) break
+      focus = decision.focus
+    }
+    onProgress({
+      stage: 'improve',
+      label: focus ? `Refining: ${focus} (pass ${attempts})…` : `Refining for a stronger match (pass ${attempts})…`,
+      attempt: attempts,
+    })
     let improved
     try {
       improved = await generateJSON({
-        model: config.llm.models.tailor,
+        model: genModel,
         prompt: buildImprovePrompt({
           baseResume,
           tailoredProfile: best.profile,
           suggestions: review.suggestions,
           missingKeywords: review.jdCoverage?.missing,
           restrictions: compactLimits(),
+          additionalContext,
         }),
       })
     } catch {
@@ -89,7 +108,6 @@ export async function runTailorAgent({ baseResume, jobDescription, onProgress = 
 
     best = pickBetter(best, candidate)
     attempts += 1
-    if (best.validation.count === 0 && (best.score ?? 0) >= config.agent.targetScore) break
   }
 
   return {
@@ -134,25 +152,31 @@ function pickBetter(a, b) {
   return (a.score ?? 0) >= (b.score ?? 0) ? a : b
 }
 
-async function critique(tailoredProfile, jobDescription, requirements) {
+const critique = (profile, jobDescription, requirements) =>
+  critiqueResume({ profile, jobDescription, requirements })
+
+/**
+ * The agent's own controller: given the latest fit review, decide whether
+ * another revision pass is worth it and what to focus on. Lets the model stop
+ * early on a strong résumé (avoiding over-tailoring) rather than always burning
+ * every allotted pass. Best-effort — defaults to continuing on any failure.
+ */
+async function decideNextAction({ review, attempt, maxAttempts }) {
   try {
     const { data } = await generateJSON({
       model: config.llm.models.critique,
-      prompt: buildCritiquePrompt({
-        tailoredProfile,
-        jobDescription,
-        requirements,
-        restrictionsGuidelines: restrictions.writingGuidelines,
-      }),
+      prompt: [
+        "You are the résumé-tailoring agent's controller deciding your next move.",
+        `This is attempt ${attempt} of at most ${maxAttempts}.`,
+        'Current fit review:',
+        JSON.stringify({ score: review.score, weaknesses: review.weaknesses, missing: review.jdCoverage?.missing, suggestions: review.suggestions }, null, 2),
+        'Decide whether ANOTHER revision pass would meaningfully improve the fit. Stop if the résumé is already strong, or if further edits would risk over-tailoring, padding, or quality loss.',
+        'Respond as JSON only: {"continue": boolean, "reason": "string", "focus": "the single highest-leverage thing to fix next"}',
+      ].join('\n'),
     })
-    return {
-      score: typeof data?.score === 'number' ? data.score : null,
-      jdCoverage: data?.jdCoverage || { covered: [], missing: [] },
-      weaknesses: Array.isArray(data?.weaknesses) ? data.weaknesses : [],
-      suggestions: Array.isArray(data?.suggestions) ? data.suggestions : [],
-    }
+    return { continue: Boolean(data?.continue), reason: data?.reason || '', focus: data?.focus || '' }
   } catch {
-    return { score: null, jdCoverage: { covered: [], missing: [] }, weaknesses: [], suggestions: [] }
+    return { continue: true, focus: '' }
   }
 }
 

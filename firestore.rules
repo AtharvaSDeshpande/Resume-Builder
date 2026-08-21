@@ -26,11 +26,28 @@ service cloud.firestore {
                     && isOwner(request.resource.data.uid);
     }
 
+    // Job positions (company, JD, interview date, status, tailored résumé +
+    // saved feedback). Scoped to the owner, same as résumés.
+    match /jobPositions/{docId} {
+      allow read, delete: if isOwner(resource.data.uid);
+      allow create: if isOwner(request.resource.data.uid);
+      allow update: if isOwner(resource.data.uid)
+                    && isOwner(request.resource.data.uid);
+    }
+
     // Admin-managed per-user limits: readable by the owner, writable only from
     // the Firestore console / Admin SDK (never by the client).
     match /userLimits/{uid} {
       allow read: if isOwner(uid);
       allow write: if false;
+    }
+
+    // BYOK secrets: each user's own Gemini API key, encrypted (AES-256-GCM)
+    // before storage. Accessed ONLY via the Admin SDK on the server — the client
+    // can never read or write it, so the (already encrypted) secret is never
+    // exposed to any browser.
+    match /userSecrets/{uid} {
+      allow read, write: if false;
     }
 
     // Daily usage counter. The client may only write its own doc, and the
