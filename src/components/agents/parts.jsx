@@ -1,4 +1,5 @@
 import React from 'react'
+import { safeUrl } from '../../utils/url.js'
 
 /** Shared, professional building blocks for agent insight views. */
 
@@ -65,13 +66,20 @@ export function Sources({ sources, grounded }) {
       <div className="mt-2 border-t border-slate-100 pt-3">
         <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Sources</div>
         <ul className="space-y-1">
-          {sources.map((s, i) => (
-            <li key={i} className="truncate text-xs">
-              <a href={s.url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                {s.title}
-              </a>
-            </li>
-          ))}
+          {sources.map((s, i) => {
+            const href = safeUrl(s.url)
+            return (
+              <li key={i} className="truncate text-xs">
+                {href ? (
+                  <a href={href} target="_blank" rel="noreferrer noopener" className="text-accent hover:underline">
+                    {s.title}
+                  </a>
+                ) : (
+                  <span className="text-slate-500">{s.title}</span>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
     )

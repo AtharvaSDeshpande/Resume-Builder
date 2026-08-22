@@ -1,0 +1,253 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`presentational component snapshots > Bullets renders a list 1`] = `
+<ul
+  class="space-y-1.5 text-sm leading-relaxed text-slate-600"
+>
+  <li
+    class="flex gap-2.5"
+  >
+    <span
+      class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+    />
+    <span>
+      Alpha
+    </span>
+  </li>
+  <li
+    class="flex gap-2.5"
+  >
+    <span
+      class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+    />
+    <span>
+      Beta
+    </span>
+  </li>
+</ul>
+`;
+
+exports[`presentational component snapshots > Chips renders tags 1`] = `
+<div
+  class="flex flex-wrap gap-1.5"
+>
+  <span
+    class="rounded-md px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700"
+  >
+    React
+  </span>
+  <span
+    class="rounded-md px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700"
+  >
+    Node
+  </span>
+</div>
+`;
+
+exports[`presentational component snapshots > NumberedList renders ordered items 1`] = `
+<ol
+  class="space-y-2"
+>
+  <li
+    class="flex gap-3 rounded-lg bg-slate-50 p-2.5 text-sm text-slate-700"
+  >
+    <span
+      class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] font-bold text-accent"
+    >
+      1
+    </span>
+    <span
+      class="leading-snug"
+    >
+      First
+    </span>
+  </li>
+  <li
+    class="flex gap-3 rounded-lg bg-slate-50 p-2.5 text-sm text-slate-700"
+  >
+    <span
+      class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] font-bold text-accent"
+    >
+      2
+    </span>
+    <span
+      class="leading-snug"
+    >
+      Second
+    </span>
+  </li>
+</ol>
+`;
+
+exports[`presentational component snapshots > Prose renders text 1`] = `
+<p
+  class="text-sm leading-relaxed text-slate-600"
+>
+  Hello world
+</p>
+`;
+
+exports[`presentational component snapshots > ScoreChip colors by band > high 1`] = `
+<span
+  class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-100 text-emerald-700"
+>
+  92
+  <span
+    class="text-[10px] font-semibold opacity-70"
+  >
+    /100
+  </span>
+</span>
+`;
+
+exports[`presentational component snapshots > ScoreChip colors by band > low 1`] = `
+<span
+  class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold bg-red-100 text-red-600"
+>
+  40
+  <span
+    class="text-[10px] font-semibold opacity-70"
+  >
+    /100
+  </span>
+</span>
+`;
+
+exports[`presentational component snapshots > ScoreChip colors by band > mid 1`] = `
+<span
+  class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold bg-amber-100 text-amber-700"
+>
+  75
+  <span
+    class="text-[10px] font-semibold opacity-70"
+  >
+    /100
+  </span>
+</span>
+`;
+
+exports[`presentational component snapshots > ScoreMeter renders a bar 1`] = `
+<div
+  class="rounded-xl border border-slate-200 p-4"
+>
+  <div
+    class="flex items-baseline justify-between"
+  >
+    <span
+      class="text-xs font-semibold text-slate-500"
+    >
+      JD fit score
+    </span>
+    <span
+      class="text-2xl font-black text-emerald-700"
+    >
+      88
+      <span
+        class="text-sm font-bold text-slate-300"
+      >
+        /100
+      </span>
+    </span>
+  </div>
+  <div
+    class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+  >
+    <div
+      class="h-full rounded-full bg-emerald-500"
+      style="width: 88%;"
+    />
+  </div>
+</div>
+`;
+
+exports[`presentational component snapshots > Sources renders grounded citations (only safe http links) 1`] = `
+<div
+  class="mt-2 border-t border-slate-100 pt-3"
+>
+  <div
+    class="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400"
+  >
+    Sources
+  </div>
+  <ul
+    class="space-y-1"
+  >
+    <li
+      class="truncate text-xs"
+    >
+      <a
+        class="text-accent hover:underline"
+        href="https://example.com/"
+        rel="noreferrer noopener"
+        target="_blank"
+      >
+        Good
+      </a>
+    </li>
+    <li
+      class="truncate text-xs"
+    >
+      <span
+        class="text-slate-500"
+      >
+        Evil
+      </span>
+    </li>
+  </ul>
+</div>
+`;
+
+exports[`presentational component snapshots > StatusBadge renders each pipeline status > applied 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-100 text-blue-700 "
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full bg-blue-500"
+  />
+  Applied
+</span>
+`;
+
+exports[`presentational component snapshots > StatusBadge renders each pipeline status > interviewing 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-indigo-100 text-indigo-700 "
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full bg-indigo-500"
+  />
+  Interviewing
+</span>
+`;
+
+exports[`presentational component snapshots > StatusBadge renders each pipeline status > offer 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-700 "
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+  />
+  Offer
+</span>
+`;
+
+exports[`presentational component snapshots > StatusBadge renders each pipeline status > open 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600 "
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full bg-slate-400"
+  />
+  Open
+</span>
+`;
+
+exports[`presentational component snapshots > StatusBadge renders each pipeline status > rejected 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-red-100 text-red-700 "
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full bg-red-500"
+  />
+  Rejected
+</span>
+`;

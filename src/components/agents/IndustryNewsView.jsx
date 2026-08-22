@@ -2,6 +2,7 @@ import React from 'react'
 import Card from '../ui/Card.jsx'
 import { Bullets, Chips, Sources } from './parts.jsx'
 import { formatDate } from '../../utils/format.js'
+import { safeUrl } from '../../utils/url.js'
 
 /** Structured render of the Industry News agent's JSON. */
 export default function IndustryNewsView({ data, sources, grounded }) {
@@ -29,11 +30,11 @@ export default function IndustryNewsView({ data, sources, grounded }) {
                   <span className="font-semibold">Impact:</span> {a.impact}
                 </div>
               )}
-              {(a.url || a.source) && (
+              {(safeUrl(a.url) || a.source) && (
                 <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
                   {a.source && <span>{a.source}</span>}
-                  {a.url && (
-                    <a href={a.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+                  {safeUrl(a.url) && (
+                    <a href={safeUrl(a.url)} target="_blank" rel="noreferrer noopener" className="font-medium text-accent hover:underline">
                       Read →
                     </a>
                   )}

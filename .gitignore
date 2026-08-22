@@ -6,4 +6,8 @@ dist
 .DS_Store
 
 server/.env
+
 server/service-account.json
+
+
+coverage

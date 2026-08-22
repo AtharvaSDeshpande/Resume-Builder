@@ -4,5 +4,6 @@ export function prettyModel(id = '') {
   const m = id.replace(/^gemini-/, '').replace(/-latest$/, '')
   const tier = /pro/.test(m) ? 'Pro' : /lite/.test(m) ? 'Flash-Lite' : /flash/.test(m) ? 'Flash' : ''
   const ver = (m.match(/^(\d+(?:\.\d+)?)/) || [])[1]
-  return ['Gemini', ver, tier].filter(Boolean).join(' ') || id
+  if (!tier && !ver) return id // unknown id → show as-is, not a bare "Gemini"
+  return ['Gemini', ver, tier].filter(Boolean).join(' ')
 }

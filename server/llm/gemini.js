@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { jsonrepair } from 'jsonrepair'
 import { config } from '../config.js'
-import { getActiveUserKey, keyStore } from './keyContext.js'
+import { getActiveUserKey, getActiveUid, keyStore } from './keyContext.js'
 
 /**
  * Thin Gemini client for the agent. Each call names the model to use (task
@@ -23,10 +23,12 @@ export const hasUsableKey = () => Boolean(getActiveUserKey())
 
 /** Friendly label for a Gemini model id, e.g. "gemini-2.5-pro" → "Gemini 2.5 Pro". */
 export function prettyModel(id = '') {
+  if (!id) return ''
   const m = id.replace(/^gemini-/, '').replace(/-latest$/, '')
-  const tier = /pro/.test(m) ? 'Pro' : /flash-lite|lite/.test(m) ? 'Flash-Lite' : /flash/.test(m) ? 'Flash' : ''
+  const tier = /pro/.test(m) ? 'Pro' : /lite/.test(m) ? 'Flash-Lite' : /flash/.test(m) ? 'Flash' : ''
   const ver = (m.match(/^(\d+(?:\.\d+)?)/) || [])[1]
-  return ['Gemini', ver, tier].filter(Boolean).join(' ') || id
+  if (!tier && !ver) return id // unknown id → show as-is, not a bare "Gemini"
+  return ['Gemini', ver, tier].filter(Boolean).join(' ')
 }
 
 /**
@@ -35,9 +37,25 @@ export function prettyModel(id = '') {
  * the request's key context so every stage of a run reuses the same model
  * without re-probing. Falls back to the last candidate if none probe cleanly.
  */
+// Best-model probe is cached per user for an hour, so we don't re-probe Pro
+// availability on every AI call (saves a round-trip per run). Also cached on the
+// request store for reuse across stages within one run.
+const BEST_MODEL_TTL_MS = 60 * 60_000
+const bestModelByUid = new Map() // uid -> { model, at }
+
 export async function resolveBestModel(candidates = config.llm.preferredModels) {
   const store = keyStore.getStore()
   if (store?.bestModel) return store.bestModel
+
+  const uid = getActiveUid()
+  if (uid) {
+    const hit = bestModelByUid.get(uid)
+    if (hit && Date.now() - hit.at < BEST_MODEL_TTL_MS) {
+      if (store) store.bestModel = hit.model
+      return hit.model
+    }
+  }
+
   let chosen = candidates[candidates.length - 1]
   for (const m of candidates) {
     try {
@@ -53,8 +71,12 @@ export async function resolveBestModel(candidates = config.llm.preferredModels) 
     }
   }
   if (store) store.bestModel = chosen
+  if (uid) bestModelByUid.set(uid, { model: chosen, at: Date.now() })
   return chosen
 }
+
+/** Clear a user's cached best-model (call when their key changes). */
+export const clearBestModel = (uid) => bestModelByUid.delete(uid)
 
 /** A rejected/invalid API key (as opposed to a rate-limit or overload). */
 const isKeyError = (err) => {

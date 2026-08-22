@@ -25,7 +25,10 @@ export const config = {
     // Path to a service-account JSON. Optional: without it, ID-token
     // verification still works, but Admin Firestore quota is disabled.
     serviceAccountPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
-    authDisabled: String(process.env.AUTH_DISABLED).toLowerCase() === 'true',
+    // Dev-only auth bypass. Hard-refused in production so a stray env var can
+    // never open every endpoint to anonymous callers.
+    authDisabled:
+      String(process.env.AUTH_DISABLED).toLowerCase() === 'true' && process.env.NODE_ENV !== 'production',
   },
 
   llm: {

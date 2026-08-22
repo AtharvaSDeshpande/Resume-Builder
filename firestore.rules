@@ -10,15 +10,6 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    // A user's per-day AI-tailor allowance. Default is 1 (see below); create a
-    // userLimits/{uid} doc with { dailyTailorLimit: N } in the console to raise
-    // it for specific users. Users may read their limit but never change it.
-    function dailyLimit(uid) {
-      return exists(/databases/$(database)/documents/userLimits/$(uid))
-        ? get(/databases/$(database)/documents/userLimits/$(uid)).data.dailyTailorLimit
-        : 1;
-    }
-
     match /resumes/{docId} {
       allow read, delete: if isOwner(resource.data.uid);
       allow create: if isOwner(request.resource.data.uid);
@@ -50,16 +41,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Daily usage counter. The client may only write its own doc, and the
-    // stored count can never exceed that user's daily limit — so the quota
-    // cannot be tampered above the allowance.
+    // Daily usage counters. Now written ONLY by the server (Admin SDK, which
+    // bypasses these rules), so the client can never tamper with its own quota.
+    // The owner may read their usage; no client may write it.
     match /usage/{uid} {
       allow read: if isOwner(uid);
-      allow write: if isOwner(uid)
-                   && request.resource.data.uid == uid
-                   && request.resource.data.count is int
-                   && request.resource.data.count >= 0
-                   && request.resource.data.count <= dailyLimit(uid);
+      allow write: if false;
     }
   }
 }

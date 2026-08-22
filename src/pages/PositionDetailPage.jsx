@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Routes, Route, NavLink, Link, useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../data/AppData.jsx'
 import { useAiActivity } from '../ai/AiActivity.jsx'
-import { customizeResume } from '../ai/customizeResume.js'
-import { agentApi } from '../services/agentApi.js'
+import { useTailor, useScore } from '../queries/backend.js'
 import { prettyModel } from '../utils/modelName.js'
 import restrictions from '../data/restrictions.json'
 import { validateProfile } from '../utils/validation.js'
@@ -33,6 +32,8 @@ export default function PositionDetailPage() {
   const navigate = useNavigate()
   const { positions, positionsLoading, masterResumes, setStatus, saveTailoring, saveScore, updatePosition } = useData()
   const { busy, run: runExclusive } = useAiActivity()
+  const tailorMutation = useTailor()
+  const scoreMutation = useScore()
   const position = positions.find((p) => p.id === id)
 
   // Tailoring state lives here (shared across tabs) so a run in progress reflects
@@ -54,10 +55,12 @@ export default function PositionDetailPage() {
     setTailoring({ running: true, progress: { label: 'Starting…' }, error: null, model: null })
     try {
       await runExclusive(async () => {
-        const res = await customizeResume({
-          baseResume: base.profile,
-          jobDescription: position.jobDescription,
-          additionalContext,
+        const res = await tailorMutation.mutateAsync({
+          body: {
+            baseResume: base.profile,
+            jobDescription: position.jobDescription,
+            additionalContext,
+          },
           onProgress: (p) =>
             setTailoring((s) => ({ ...s, progress: p, model: p.stage === 'model' && p.model ? p.model : s.model })),
         })
@@ -99,7 +102,7 @@ export default function PositionDetailPage() {
     const profile = position.tailored?.profile
     if (!profile) return
     await runExclusive(async () => {
-      const res = await agentApi.score({ profile, jobDescription: position.jobDescription })
+      const res = await scoreMutation.mutateAsync({ profile, jobDescription: position.jobDescription })
       await saveScore(position.id, {
         ...(position.feedback || {}),
         score: res.score,

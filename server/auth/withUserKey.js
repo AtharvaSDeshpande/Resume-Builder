@@ -15,7 +15,7 @@ export async function attachUserKey(req, res, next) {
     key = null
   }
   req.hasUserKey = Boolean(key)
-  runWithKey(key, () => next())
+  runWithKey(key, req.user?.uid, () => next())
 }
 
 /**

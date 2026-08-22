@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useData } from '../../data/AppData.jsx'
 import { useAiActivity } from '../../ai/AiActivity.jsx'
-import { agentApi } from '../../services/agentApi.js'
+import { useRunAgent } from '../../queries/backend.js'
 import { formatDate } from '../../utils/format.js'
 import { prettyModel } from '../../utils/modelName.js'
 import Card from '../ui/Card.jsx'
@@ -17,31 +17,32 @@ import { Spinner } from '../ui/ProgressPanel.jsx'
 export default function AgentTab({ position, agentDef }) {
   const { saveAgentResult } = useData()
   const { busy, run: runExclusive } = useAiActivity()
-  const [running, setRunning] = useState(false)
+  const runAgent = useRunAgent()
   const [error, setError] = useState(null)
 
   const saved = position.agents?.[agentDef.id]
   const View = agentDef.View
+  const running = runAgent.isPending
   // Disabled while THIS agent runs, or any other AI task is active.
   const blocked = busy && !running
 
   async function run() {
-    setRunning(true)
     setError(null)
     try {
       await runExclusive(async () => {
-        const result = await agentApi.runAgent(agentDef.id, {
-          company: position.company,
-          jobDescription: position.jobDescription,
-          requirements: position.feedback?.requirements,
-          profile: position.tailored?.profile,
+        const result = await runAgent.mutateAsync({
+          id: agentDef.id,
+          body: {
+            company: position.company,
+            jobDescription: position.jobDescription,
+            requirements: position.feedback?.requirements,
+            profile: position.tailored?.profile,
+          },
         })
         await saveAgentResult(position.id, agentDef.id, result)
       })
     } catch (err) {
       setError(err.message || 'The agent could not complete.')
-    } finally {
-      setRunning(false)
     }
   }
 
